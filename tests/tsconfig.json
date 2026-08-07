@@ -1,0 +1,18 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "module": "Preserve",
+    "moduleResolution": "Bundler",
+    "rootDir": "..",
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "noUncheckedIndexedAccess": false,
+    "types": ["node"],
+    "paths": {
+      "@": ["../src/index.ts"],
+      "@/*": ["../src/*"]
+    }
+  },
+  "include": [".", "../commands", "../vitest.config.ts"]
+}

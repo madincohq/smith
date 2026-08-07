@@ -1,0 +1,12 @@
+import { Command } from '@madinco/smith';
+
+export class {{ class }} extends Command {
+	readonly name = '{{ name }}';
+	readonly description = '{{ description }}';
+
+	handle(): number {
+		this.info('{{ name }} ran.');
+
+		return Command.SUCCESS;
+	}
+}
