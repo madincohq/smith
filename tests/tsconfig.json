@@ -11,7 +11,8 @@
     "types": ["node"],
     "paths": {
       "@": ["../src/index.ts"],
-      "@/*": ["../src/*"]
+      "@/*": ["../src/*"],
+      "@madinco/smith": ["../src/index.ts"]
     }
   },
   "include": [".", "../commands", "../vitest.config.ts"]

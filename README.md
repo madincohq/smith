@@ -2,10 +2,10 @@
   <picture>
     <source
       media="(prefers-color-scheme: dark)"
-      srcset="https://raw.githubusercontent.com/madincohq/brand/main/logo/mark/madinco-on-dark.png"
+      srcset="https://raw.githubusercontent.com/madincohq/brand/refs/heads/main/logo/mark/madinco-on-dark.png"
     >
     <img
-      src="https://raw.githubusercontent.com/madincohq/brand/main/logo/mark/madinco.png"
+      src="https://raw.githubusercontent.com/madincohq/brand/refs/heads/main/logo/mark/madinco.png"
       alt="Madinco"
       width="72"
     >

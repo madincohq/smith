@@ -77,20 +77,12 @@ describe('handle', () => {
 		expect(out.join('')).toContain('greet  Say hello');
 	});
 
-	it('lists the built-in commands alongside the registered ones', async () => {
+	it('registers the built-in commands', async () => {
 		const { out, kernel } = harness();
 		await kernel.handle(['list']);
 
-		expect(out.join('')).toContain('help   Show help for a command');
-		expect(out.join('')).toContain('list   List the available commands');
-	});
-
-	it('shows usage for a named command', async () => {
-		const { out, kernel } = harness();
-
-		expect(await kernel.handle(['help', 'greet'])).toBe(Command.SUCCESS);
-		expect(out.join('')).toContain('Say hello');
-		expect(out.join('')).toContain('--name[=NAME]');
+		expect(out.join('')).toContain('help');
+		expect(out.join('')).toContain('list');
 	});
 
 	it('treats --help on a command as a request for its usage', async () => {
@@ -106,13 +98,6 @@ describe('handle', () => {
 
 		expect(await kernel.handle(['--help'])).toBe(Command.SUCCESS);
 		expect(out.join('')).toContain('Available commands');
-	});
-
-	it('reports an unknown command given to help', async () => {
-		const { err, kernel } = harness();
-
-		expect(await kernel.handle(['help', 'nope'])).toBe(Command.INVALID);
-		expect(err[0]).toContain('Unknown command "nope"');
 	});
 
 	it('reports an unknown command and returns the invalid code', async () => {

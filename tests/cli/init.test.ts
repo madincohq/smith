@@ -1,12 +1,23 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import {
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	realpathSync,
+	rmSync,
+	statSync,
+	writeFileSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Command, Kernel, Terminal, type Sinks } from '@';
 import { InitCommand } from '@/cli/init';
 import type { Location, Project } from '@/cli/resolve';
 
 let directory = '';
+
+const packageRoot = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 
 function outside(): Location {
 	const home = join(directory, 'home');
@@ -58,6 +69,58 @@ describe('handle', () => {
 
 		expect(await harness(location).kernel.handle(['init'])).toBe(Command.SUCCESS);
 		expect(existsSync(location.global)).toBe(true);
+	});
+
+	it('makes the global directory a package so commands can import smith', async () => {
+		const location = outside();
+		await harness(location).kernel.handle(['init']);
+
+		const manifest = JSON.parse(readFileSync(join(location.home, 'package.json'), 'utf8'));
+
+		expect(manifest).toEqual({ type: 'module', private: true });
+	});
+
+	it('keeps node_modules and secrets out of the global directory', async () => {
+		const location = outside();
+		await harness(location).kernel.handle(['init']);
+
+		const ignore = readFileSync(join(location.home, '.gitignore'), 'utf8');
+
+		expect(ignore).toContain('node_modules');
+		expect(ignore).toContain('.env');
+	});
+
+	it('links smith into the global directory', async () => {
+		const location = outside();
+		await harness(location).kernel.handle(['init']);
+
+		const linked = join(location.home, 'node_modules', '@madinco', 'smith');
+
+		expect(realpathSync(linked)).toBe(realpathSync(packageRoot));
+	});
+
+	it('leaves an existing global package alone', async () => {
+		const location = outside();
+		await harness(location).kernel.handle(['init']);
+
+		writeFileSync(join(location.home, 'package.json'), '{ "mine": true }');
+		await harness(location).kernel.handle(['init']);
+
+		expect(readFileSync(join(location.home, 'package.json'), 'utf8')).toBe('{ "mine": true }');
+	});
+
+	it('runs twice without failing', async () => {
+		const location = outside();
+		await harness(location).kernel.handle(['init']);
+
+		expect(await harness(location).kernel.handle(['init'])).toBe(Command.SUCCESS);
+	});
+
+	it('writes no global package when setting up a project', async () => {
+		const location = inside();
+		await harness(location).kernel.handle(['init']);
+
+		expect(existsSync(join(location.home, 'package.json'))).toBe(false);
 	});
 
 	it('creates the project directory when there is a project', async () => {

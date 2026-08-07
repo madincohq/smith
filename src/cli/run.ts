@@ -4,11 +4,15 @@ import { Terminal } from '../output/terminal.js';
 import { InitCommand } from './init.js';
 import { directories, locate, target } from './resolve.js';
 
-export async function run(argv: string[], cwd: string): Promise<number> {
+export async function run(
+	argv: string[],
+	cwd: string,
+	terminal: Terminal = Terminal.standard()
+): Promise<number> {
 	const location = locate(cwd);
 	const context = { cwd, project: location.project?.root ?? null };
 
-	const kernel = Kernel.make(Terminal.standard(), context)
+	const kernel = Kernel.make(terminal, context)
 		.add(new MakeCommand(target(location)))
 		.add(new InitCommand(location));
 
