@@ -41,9 +41,6 @@ function recorder(context?: Context) {
 	const sinks: Sinks = {
 		out: (text) => void out.push(text),
 		err: (text) => void err.push(text),
-		columns: () => 80,
-		decorated: false,
-		interactive: false,
 	};
 
 	return { out, err, kernel: Kernel.make(new Terminal(sinks), context) };

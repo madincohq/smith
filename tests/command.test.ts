@@ -62,9 +62,6 @@ function recorder() {
 	const sinks: Sinks = {
 		out: (text) => void out.push(text),
 		err: (text) => void err.push(text),
-		columns: () => 80,
-		decorated: false,
-		interactive: false,
 	};
 
 	return { out, err, terminal: new Terminal(sinks) };
@@ -172,6 +169,44 @@ describe('output', () => {
 
 		expect(out.join('')).toContain('Section:');
 		expect(out.join('')).toContain('  first');
+	});
+
+	it('writes a detail row to stdout', async () => {
+		const { out, terminal } = recorder();
+
+		class ReportingCommand extends Command {
+			readonly name = 'reporting';
+			readonly description = 'Writes a detail row';
+
+			handle(): number {
+				this.detail('Node', 'v24.19.0');
+
+				return Command.SUCCESS;
+			}
+		}
+
+		await new ReportingCommand().run(terminal, []);
+
+		expect(out).toEqual(['Node: v24.19.0\n']);
+	});
+
+	it('chains from a detail row', async () => {
+		const { out, terminal } = recorder();
+
+		class ReportingCommand extends Command {
+			readonly name = 'reporting';
+			readonly description = 'Writes two detail rows';
+
+			handle(): number {
+				this.detail('Node', 'v24.19.0').detail('Package manager', 'pnpm 11.1.0');
+
+				return Command.SUCCESS;
+			}
+		}
+
+		await new ReportingCommand().run(terminal, []);
+
+		expect(out).toEqual(['Node: v24.19.0\n', 'Package manager: pnpm 11.1.0\n']);
 	});
 });
 

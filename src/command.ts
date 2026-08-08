@@ -78,6 +78,11 @@ export abstract class Command {
 		return this;
 	}
 
+	detail(label: string, value: string): this {
+		this.terminal.detail(label, value);
+		return this;
+	}
+
 	sections(sections: Section[]): this {
 		this.terminal.sections(sections);
 		return this;

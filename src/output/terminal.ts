@@ -1,11 +1,14 @@
 import { Spinner } from './spinner.js';
 import { Progress, type ProgressBar } from './progress.js';
+import { detail } from './detail.js';
 
 const DEFAULT_COLUMNS = 80;
+const MARGIN = 1;
 
 const RED = 31;
 const GREEN = 32;
 const YELLOW = 33;
+const DIM = 2;
 
 type Writer = (text: string) => void;
 
@@ -17,13 +20,25 @@ export interface Section {
 export interface Sinks {
 	out: Writer;
 	err: Writer;
-	columns: () => number;
-	decorated: boolean;
-	interactive: boolean;
+	columns?: () => number;
+	decorated?: boolean;
+	aligned?: boolean;
+	interactive?: boolean;
 }
 
 export class Terminal {
-	constructor(private readonly sinks: Sinks) {}
+	private readonly sinks: Required<Sinks>;
+
+	constructor(sinks: Sinks) {
+		this.sinks = {
+			out: sinks.out,
+			err: sinks.err,
+			columns: sinks.columns ?? (() => DEFAULT_COLUMNS),
+			decorated: sinks.decorated ?? false,
+			aligned: sinks.aligned ?? false,
+			interactive: sinks.interactive ?? false,
+		};
+	}
 
 	static standard(): Terminal {
 		return new Terminal({
@@ -31,18 +46,13 @@ export class Terminal {
 			err: (text) => void process.stderr.write(text),
 			columns: () => process.stdout.columns ?? DEFAULT_COLUMNS,
 			decorated: Boolean(process.stdout.isTTY) && !process.env.NO_COLOR,
+			aligned: Boolean(process.stdout.isTTY),
 			interactive: Boolean(process.stderr.isTTY),
 		});
 	}
 
 	static silent(): Terminal {
-		return new Terminal({
-			out: () => {},
-			err: () => {},
-			columns: () => DEFAULT_COLUMNS,
-			decorated: false,
-			interactive: false,
-		});
+		return new Terminal({ out: () => {}, err: () => {} });
 	}
 
 	line(text = ''): this {
@@ -73,6 +83,10 @@ export class Terminal {
 		return this;
 	}
 
+	detail(label: string, value: string): this {
+		return this.line(detail({ label, value }, this.width, (dots) => this.paint(DIM, dots)));
+	}
+
 	sections(sections: Section[]): this {
 		sections.forEach((section, index) => {
 			if (index > 0) this.newLine();
@@ -85,10 +99,7 @@ export class Terminal {
 	}
 
 	progress(total: number): ProgressBar {
-		return Progress.of(total, {
-			write: this.sinks.err,
-			columns: this.sinks.columns(),
-		}).start();
+		return Progress.of(total, { write: this.sinks.err, columns: this.columns }).start();
 	}
 
 	spinner(): Spinner {
@@ -97,6 +108,14 @@ export class Terminal {
 
 	spin<T>(label: string, task: () => Promise<T> | T): Promise<T> {
 		return this.spinner().run(label, task);
+	}
+
+	private get columns(): number {
+		return this.sinks.columns() || DEFAULT_COLUMNS;
+	}
+
+	private get width(): number | null {
+		return this.sinks.aligned ? this.columns - MARGIN : null;
 	}
 
 	private paint(code: number, text: string): string {

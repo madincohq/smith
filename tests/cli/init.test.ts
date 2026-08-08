@@ -42,9 +42,6 @@ function harness(location: Location) {
 	const sinks: Sinks = {
 		out: (text) => void out.push(text),
 		err: (text) => void err.push(text),
-		columns: () => 80,
-		decorated: false,
-		interactive: false,
 	};
 
 	const kernel = Kernel.make(new Terminal(sinks), {

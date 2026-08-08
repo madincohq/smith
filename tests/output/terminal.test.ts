@@ -8,9 +8,6 @@ function harness(overrides: Partial<Sinks> = {}) {
 	const sinks: Sinks = {
 		out: (text) => void out.push(text),
 		err: (text) => void err.push(text),
-		columns: () => 80,
-		decorated: false,
-		interactive: false,
 		...overrides,
 	};
 
@@ -84,6 +81,43 @@ describe('decorated', () => {
 		terminal.info();
 
 		expect(out).toEqual(['\n']);
+	});
+});
+
+describe('detail', () => {
+	it('fills the terminal width, one column short of wrapping', () => {
+		const { out, terminal } = harness({ columns: () => 40, aligned: true });
+		terminal.detail('Node', 'v24.19.0');
+
+		expect(out).toEqual([`Node ${'.'.repeat(25)} v24.19.0\n`]);
+	});
+
+	it('dims the dots when the sink is decorated', () => {
+		const { out, terminal } = harness({ columns: () => 40, aligned: true, decorated: true });
+		terminal.detail('Node', 'v24.19.0');
+
+		expect(out).toEqual([`Node \x1b[2m${'.'.repeat(25)}\x1b[0m v24.19.0\n`]);
+	});
+
+	it('collapses when the sink is not aligned', () => {
+		const { out, terminal } = harness({ columns: () => 40 });
+		terminal.detail('Node', 'v24.19.0');
+
+		expect(out).toEqual(['Node: v24.19.0\n']);
+	});
+
+	it('writes to stdout', () => {
+		const { err, terminal } = harness({ aligned: true });
+		terminal.detail('Node', 'v24.19.0');
+
+		expect(err).toEqual([]);
+	});
+
+	it('falls back to a default width when the terminal reports none', () => {
+		const { out, terminal } = harness({ columns: () => 0, aligned: true });
+		terminal.detail('Node', 'v24.19.0');
+
+		expect(out).toEqual([`Node ${'.'.repeat(65)} v24.19.0\n`]);
 	});
 });
 

@@ -26,9 +26,6 @@ function harness(...commands: Command[]) {
 	const sinks: Sinks = {
 		out: (text) => void out.push(text),
 		err: () => {},
-		columns: () => 80,
-		decorated: false,
-		interactive: false,
 	};
 
 	const registry = new Map(commands.map((command) => [command.name, command]));
