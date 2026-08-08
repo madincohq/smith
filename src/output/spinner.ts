@@ -1,5 +1,6 @@
+import { CLEAR_LINE } from './ansi.js';
+
 const FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-const CLEAR = '\r\x1b[2K';
 const INTERVAL = 80;
 const SLOW = 1000;
 
@@ -52,7 +53,7 @@ export class Spinner {
 
 		clearInterval(this.timer);
 		this.timer = null;
-		this.write(CLEAR);
+		this.write(CLEAR_LINE);
 
 		return this;
 	}
@@ -68,7 +69,7 @@ export class Spinner {
 	}
 
 	private draw(): void {
-		this.write(`${CLEAR}${FRAMES[this.index]} ${this.label}${this.elapsed()}`);
+		this.write(`${CLEAR_LINE}${FRAMES[this.index]} ${this.label}${this.elapsed()}`);
 		this.index = (this.index + 1) % FRAMES.length;
 	}
 

@@ -1,10 +1,15 @@
 import { detached, type Context } from './context.js';
 import { parse, type Options, type Value } from './options.js';
 import { Terminal, type Section } from './output/terminal.js';
+import type { Detail } from './output/detail.js';
 import type { Spinner } from './output/spinner.js';
 import type { ProgressBar } from './output/progress.js';
 
+export const COMMAND: unique symbol = Symbol.for('smith.command');
+
 export abstract class Command {
+	static readonly [COMMAND] = true;
+
 	static readonly SUCCESS = 0;
 	static readonly FAILURE = 1;
 	static readonly INVALID = 2;
@@ -80,6 +85,11 @@ export abstract class Command {
 
 	detail(label: string, value: string): this {
 		this.terminal.detail(label, value);
+		return this;
+	}
+
+	details(heading: string, rows: Detail[]): this {
+		this.terminal.details(heading, rows);
 		return this;
 	}
 

@@ -2,8 +2,9 @@ export { Command } from './command.js';
 export { MakeCommand } from './commands/make.js';
 export { detached, type Context } from './context.js';
 export { Kernel } from './kernel.js';
+export { InvalidOption } from './exceptions/invalid-option.js';
+export { renders, type Renders } from './exceptions/renders.js';
 export {
-	InvalidOption,
 	flag,
 	number,
 	option,
@@ -11,6 +12,7 @@ export {
 	type Options,
 	type Value,
 } from './options.js';
+export type { Detail, Tone } from './output/detail.js';
 export { listing, usage, type Described } from './output/help.js';
 export { Progress, ProgressBar, type ProgressOptions } from './output/progress.js';
 export { Spinner, type SpinnerOptions } from './output/spinner.js';

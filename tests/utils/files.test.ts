@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -28,6 +28,47 @@ describe('existing', () => {
 
 	it('reports nothing when every path is free', () => {
 		expect(Files.existing([{ path: join(directory, 'free.md'), contents: 'new' }])).toEqual([]);
+	});
+});
+
+describe('containing', () => {
+	it('finds the directory holding the target', () => {
+		writeFileSync(join(directory, 'package.json'), '{}');
+
+		expect(Files.containing(directory, 'package.json')).toBe(directory);
+	});
+
+	it('climbs to the nearest ancestor holding it', () => {
+		writeFileSync(join(directory, 'package.json'), '{}');
+		mkdirSync(join(directory, 'src', 'console'), { recursive: true });
+
+		expect(Files.containing(join(directory, 'src/console'), 'package.json')).toBe(directory);
+	});
+
+	it('stops at the nearest one when an ancestor holds it too', () => {
+		writeFileSync(join(directory, 'package.json'), '{}');
+
+		const inner = join(directory, 'packages', 'site');
+		mkdirSync(inner, { recursive: true });
+		writeFileSync(join(inner, 'package.json'), '{}');
+
+		expect(Files.containing(inner, 'package.json')).toBe(inner);
+	});
+
+	it('finds a target that is several segments deep', () => {
+		const nested = join(directory, 'node_modules', '@madinco', 'smith');
+		mkdirSync(nested, { recursive: true });
+		writeFileSync(join(nested, 'index.js'), '');
+
+		expect(Files.containing(directory, 'node_modules/@madinco/smith/index.js')).toBe(directory);
+	});
+
+	it('finds nothing when no ancestor holds it', () => {
+		expect(Files.containing(directory, 'nothing-here.json')).toBeNull();
+	});
+
+	it('finds nothing when the directory it starts from is gone', () => {
+		expect(Files.containing(join(directory, 'nope'), 'package.json')).toBeNull();
 	});
 });
 

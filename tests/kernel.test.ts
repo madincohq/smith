@@ -1,8 +1,18 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Command, Kernel, Terminal, flag, number, option, type Context, type Sinks } from '@';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+	Command,
+	Kernel,
+	Terminal,
+	flag,
+	number,
+	option,
+	type Context,
+	type Section,
+	type Sinks,
+} from '@';
 
 class GreetCommand extends Command {
 	readonly name = 'greet';
@@ -124,6 +134,56 @@ describe('handle', () => {
 		expect(await kernel.handle(['boom'])).toBe(Command.FAILURE);
 		expect(err[0]).toContain('No dev server on http://mco.localhost');
 	});
+
+	it('names the command that failed, so the message is not orphaned', async () => {
+		const { err, kernel } = harness();
+
+		await kernel.handle(['boom']);
+
+		expect(err[0]).toContain('boom failed:');
+	});
+
+	it('keeps the stack to itself unless SMITH_DEBUG asks for it', async () => {
+		const { err, kernel } = harness();
+
+		await kernel.handle(['boom']);
+
+		expect(err.join('')).not.toContain('at BoomCommand');
+	});
+
+	it('prints the stack when SMITH_DEBUG asks for it', async () => {
+		const { err, kernel } = harness();
+
+		vi.stubEnv('SMITH_DEBUG', '1');
+		await kernel.handle(['boom']);
+		vi.unstubAllEnvs();
+
+		expect(err.join('')).toContain('at BoomCommand');
+	});
+
+	it('lets an error render its own explanation, whoever defined it', async () => {
+		class Unconfigured extends Error {
+			render(): Section[] {
+				return [{ title: 'Next step', lines: ['Run smith init'] }];
+			}
+		}
+
+		class SetupCommand extends Command {
+			readonly name = 'setup';
+			readonly description = 'Needs configuring first';
+
+			handle(): number {
+				throw new Unconfigured('smith is not configured here.');
+			}
+		}
+
+		const { out, err, kernel } = recorder();
+		kernel.add(new SetupCommand());
+
+		expect(await kernel.handle(['setup'])).toBe(Command.INVALID);
+		expect(err.join('')).toContain('smith is not configured here.');
+		expect(out.join('')).toContain('Run smith init');
+	});
 });
 
 let directory = '';
@@ -197,7 +257,7 @@ describe('discover', () => {
 		const { err, kernel } = recorder();
 		await kernel.discover(directory);
 
-		expect(err.join('')).toContain('it exports no named command');
+		expect(err.join('')).toContain('no command class exported');
 		expect(await kernel.handle(['list'])).toBe(Command.SUCCESS);
 	});
 
@@ -262,6 +322,80 @@ describe('discover', () => {
 		const { kernel } = recorder();
 
 		await expect(kernel.discover(join(directory, 'nope'))).resolves.toBe(kernel);
+	});
+
+	it('registers a command extending the Command of another copy of smith', async () => {
+		writeFileSync(
+			join(directory, 'foreign.ts'),
+			`const COMMAND = Symbol.for('smith.command');
+
+			class Command {
+				name = 'foreign';
+				description = 'Built against a second copy of smith';
+				run(terminal) { terminal.line('ran foreign'); return 0; }
+			}
+
+			Command[COMMAND] = true;
+
+			export class Foreign extends Command {}`
+		);
+
+		const { out, kernel } = recorder();
+		await kernel.discover(directory);
+
+		expect(await kernel.handle(['foreign'])).toBe(Command.SUCCESS);
+		expect(out.join('')).toContain('ran foreign');
+	});
+
+	it('ignores an exported class that carries no command marker', async () => {
+		writeFileSync(
+			join(directory, 'plain.ts'),
+			`export class NotACommand {
+				name = 'plain';
+				description = 'Looks like one, is not';
+				run() { return 0; }
+			}`
+		);
+
+		const { kernel } = recorder();
+		await kernel.discover(directory);
+
+		expect(await kernel.handle(['plain'])).toBe(Command.INVALID);
+	});
+
+	it('sums up the files that export no command rather than naming every one', async () => {
+		for (const name of ['one.ts', 'two.ts', 'three.ts']) {
+			writeFileSync(join(directory, name), 'export const value = 1;');
+		}
+
+		const { err, kernel } = recorder();
+		await kernel.discover(directory);
+
+		expect(err.join('')).toContain('Skipped 3 files');
+		expect(err.join('')).not.toContain('one.ts');
+	});
+
+	it('names the file when only one of them exports no command', async () => {
+		writeFileSync(join(directory, 'lonely.ts'), 'export const value = 1;');
+
+		const { err, kernel } = recorder();
+		await kernel.discover(directory);
+
+		expect(err.join('')).toContain('lonely.ts');
+	});
+
+	it('names a file that failed to import even when others were skipped quietly', async () => {
+		writeFileSync(join(directory, 'broken.ts'), "throw new Error('boom at import time');");
+
+		for (const name of ['one.ts', 'two.ts']) {
+			writeFileSync(join(directory, name), 'export const value = 1;');
+		}
+
+		const { err, kernel } = recorder();
+		await kernel.discover(directory);
+
+		expect(err.join('')).toContain('broken.ts');
+		expect(err.join('')).toContain('Skipped 2 files');
 	});
 
 	it('reports a file that throws on import and keeps going', async () => {

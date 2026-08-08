@@ -190,6 +190,25 @@ describe('output', () => {
 		expect(out).toEqual(['Node: v24.19.0\n']);
 	});
 
+	it('writes a heading and its rows', async () => {
+		const { out, terminal } = recorder();
+
+		class ReportingCommand extends Command {
+			readonly name = 'reporting';
+			readonly description = 'Writes a group of detail rows';
+
+			handle(): number {
+				this.details('Runtime', [{ label: 'Node', value: 'v24.19.0' }]);
+
+				return Command.SUCCESS;
+			}
+		}
+
+		await new ReportingCommand().run(terminal, []);
+
+		expect(out).toEqual(['  Runtime\n', '  Node: v24.19.0\n']);
+	});
+
 	it('chains from a detail row', async () => {
 		const { out, terminal } = recorder();
 

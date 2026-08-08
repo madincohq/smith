@@ -1,8 +1,8 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { directories, locate, target } from '@/cli/resolve';
+import { binary, directories, locate, target } from '@/cli/resolve';
 
 let directory = '';
 
@@ -127,5 +127,66 @@ describe('target', () => {
 
 	it('writes into the global directory otherwise', () => {
 		expect(target(locate(directory))).toBe(join(directory, 'home', 'commands'));
+	});
+});
+
+describe('binary', () => {
+	function installSmith(root: string): string {
+		const bin = join(root, 'node_modules', '@madinco', 'smith', 'bin');
+
+		mkdirSync(bin, { recursive: true });
+		writeFileSync(join(bin, 'smith.js'), '');
+
+		return join(bin, 'smith.js');
+	}
+
+	it('finds the binary installed in the directory it starts from', () => {
+		const root = realpathSync(directory);
+		const bin = installSmith(root);
+
+		expect(binary(root)).toBe(bin);
+	});
+
+	it('climbs to the binary installed in a parent', () => {
+		const root = realpathSync(directory);
+		const bin = installSmith(root);
+		const nested = join(root, 'src', 'console');
+
+		mkdirSync(nested, { recursive: true });
+
+		expect(binary(nested)).toBe(bin);
+	});
+
+	it('stops at the first binary it finds rather than climbing past it', () => {
+		const root = realpathSync(directory);
+		installSmith(root);
+
+		const deeper = join(root, 'packages', 'site');
+		mkdirSync(deeper, { recursive: true });
+		const nearest = installSmith(deeper);
+
+		expect(binary(deeper)).toBe(nearest);
+	});
+
+	it('finds nothing when no binary is installed anywhere above', () => {
+		expect(binary(realpathSync(directory))).toBeNull();
+	});
+
+	it('finds nothing when the directory it starts from is gone', () => {
+		expect(binary(join(directory, 'nope'))).toBeNull();
+	});
+
+	it('resolves a symlinked install to the binary it really is', () => {
+		const root = realpathSync(directory);
+		const checkout = join(root, 'checkout', 'bin');
+
+		mkdirSync(checkout, { recursive: true });
+		writeFileSync(join(checkout, 'smith.js'), '');
+
+		const link = join(root, 'project', 'node_modules', '@madinco', 'smith');
+		mkdirSync(dirname(link), { recursive: true });
+		symlinkSync(join(root, 'checkout'), link, 'junction');
+
+		expect(binary(join(root, 'project'))).toBe(join(checkout, 'smith.js'));
 	});
 });

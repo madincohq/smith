@@ -1,8 +1,19 @@
 #!/usr/bin/env node
-import { register } from 'tsx/esm/api';
+import { realpathSync } from 'node:fs';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { binary } from '../dist/cli/resolve.js';
 
-register();
+const self = realpathSync(fileURLToPath(import.meta.url));
+const nearest = binary(process.cwd());
 
-const { run } = await import('../dist/cli/run.js');
+if (nearest !== null && nearest !== self) {
+	await import(pathToFileURL(nearest).href);
+} else {
+	const { register } = await import('tsx/esm/api');
 
-process.exit(await run(process.argv.slice(2), process.cwd()));
+	register();
+
+	const { run } = await import('../dist/cli/run.js');
+
+	process.exit(await run(process.argv.slice(2), process.cwd()));
+}

@@ -1,6 +1,7 @@
+import { CLEAR_LINE } from './ansi.js';
+
 const FILL = '█';
 const TRACK = '░';
-const CLEAR = '\r\x1b[2K';
 const MIN_BAR = 10;
 const MAX_BAR = 30;
 const LABEL_ROOM = 20;
@@ -55,7 +56,7 @@ export class ProgressBar {
 	finish(summary = ''): void {
 		if (this.closed) return;
 		this.closed = true;
-		this.write(summary ? `${CLEAR}${summary}\n` : '\n');
+		this.write(summary ? `${CLEAR_LINE}${summary}\n` : '\n');
 	}
 
 	frame(): string {
@@ -67,7 +68,7 @@ export class ProgressBar {
 		const room = this.columns - head.length - 1;
 		const label = this.label && room > 1 ? ` ${truncate(this.label, room)}` : '';
 
-		return `${CLEAR}${head}${label}`;
+		return `${CLEAR_LINE}${head}${label}`;
 	}
 
 	private barWidth(counts: string): number {

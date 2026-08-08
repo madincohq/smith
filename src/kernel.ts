@@ -1,12 +1,12 @@
 import { existsSync, readdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { Command } from './command.js';
+import { COMMAND, Command } from './command.js';
+import { AboutCommand } from './commands/about.js';
 import { HelpCommand } from './commands/help.js';
 import { ListCommand } from './commands/list.js';
 import { detached, type Context } from './context.js';
-import { usage } from './output/help.js';
-import { InvalidOption } from './options.js';
+import { renders } from './exceptions/renders.js';
 import { Terminal } from './output/terminal.js';
 
 const ASKING = ['--help', '-h'];
@@ -14,6 +14,11 @@ const SOURCE = /(?<!\.d)\.ts$|\.js$/;
 const IGNORED = /^[._]/;
 
 type Constructor = new () => Command;
+
+interface Skip {
+	readonly path: string;
+	readonly reason?: string;
+}
 
 export class Kernel {
 	private readonly commands = new Map<string, Command>();
@@ -26,7 +31,10 @@ export class Kernel {
 	static make(terminal: Terminal = Terminal.standard(), context: Context = detached()): Kernel {
 		const kernel = new Kernel(terminal, context);
 
-		return kernel.add(new ListCommand(kernel.commands)).add(new HelpCommand(kernel.commands));
+		return kernel
+			.add(new ListCommand(kernel.commands))
+			.add(new HelpCommand(kernel.commands))
+			.add(new AboutCommand());
 	}
 
 	add(command: Command): this {
@@ -35,7 +43,16 @@ export class Kernel {
 	}
 
 	async discover(directory: string): Promise<this> {
-		if (!existsSync(directory)) return this;
+		const skipped: Skip[] = [];
+
+		await this.walk(directory, skipped);
+		this.summarise(directory, skipped);
+
+		return this;
+	}
+
+	private async walk(directory: string, skipped: Skip[]): Promise<void> {
+		if (!existsSync(directory)) return;
 
 		const entries = readdirSync(directory, { withFileTypes: true }).sort((one, other) =>
 			one.name.localeCompare(other.name)
@@ -45,14 +62,14 @@ export class Kernel {
 			const path = join(directory, entry.name);
 
 			if (IGNORED.test(entry.name)) continue;
-			else if (entry.isDirectory()) await this.discover(path);
-			else if (SOURCE.test(entry.name) && !entry.name.includes('.test.')) await this.load(path);
+			else if (entry.isDirectory()) await this.walk(path, skipped);
+			else if (SOURCE.test(entry.name) && !entry.name.includes('.test.')) {
+				await this.load(path, skipped);
+			}
 		}
-
-		return this;
 	}
 
-	private async load(path: string): Promise<void> {
+	private async load(path: string, skipped: Skip[]): Promise<void> {
 		let found = false;
 
 		try {
@@ -69,14 +86,35 @@ export class Kernel {
 				found = true;
 			}
 		} catch (reason) {
-			this.terminal.warn(
-				`Skipped ${path}: ${reason instanceof Error ? reason.message : String(reason)}`
-			);
+			skipped.push({ path, reason: reason instanceof Error ? reason.message : String(reason) });
 
 			return;
 		}
 
-		if (!found) this.terminal.warn(`Skipped ${path}: it exports no named command.`);
+		if (!found) skipped.push({ path });
+	}
+
+	private summarise(directory: string, skipped: Skip[]): void {
+		for (const { path, reason } of skipped) {
+			if (reason !== undefined) this.terminal.warn(`Skipped ${path}: ${reason}`);
+		}
+
+		const quiet = skipped.filter((skip) => skip.reason === undefined);
+		const [only] = quiet;
+
+		if (quiet.length === 1 && only) {
+			this.terminal.warn(`Skipped ${only.path}: no command class exported.`);
+		} else if (quiet.length > 1) {
+			this.terminal.warn(
+				`Skipped ${quiet.length} files in ${this.shorten(directory)}: no command class exported.`
+			);
+		}
+	}
+
+	private shorten(directory: string): string {
+		const short = relative(this.context.cwd, directory);
+
+		return short && !short.startsWith('..') ? short : directory;
 	}
 
 	async handle(argv: string[]): Promise<number> {
@@ -102,17 +140,24 @@ export class Kernel {
 	}
 
 	private report(reason: unknown, command: Command): number {
-		if (reason instanceof InvalidOption) {
-			this.terminal.error(reason.message).newLine().sections(usage(command));
+		if (renders(reason)) {
+			this.terminal.error(reason.message).newLine().sections(reason.render(command));
+
 			return Command.INVALID;
 		}
 
-		this.terminal.error(reason instanceof Error ? reason.message : String(reason));
+		this.terminal.error(
+			`${command.name} failed: ${reason instanceof Error ? reason.message : String(reason)}`
+		);
+
+		if (process.env.SMITH_DEBUG && reason instanceof Error && reason.stack) {
+			this.terminal.error(reason.stack);
+		}
 
 		return Command.FAILURE;
 	}
 }
 
 function constructs(exported: unknown): exported is Constructor {
-	return typeof exported === 'function' && exported.prototype instanceof Command;
+	return typeof exported === 'function' && COMMAND in exported;
 }

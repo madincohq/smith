@@ -1,14 +1,22 @@
 import { Spinner } from './spinner.js';
 import { Progress, type ProgressBar } from './progress.js';
-import { detail } from './detail.js';
+import { detail, leader, type Detail, type Tone } from './detail.js';
+import { Color, Style, ink, type Ink } from './ansi.js';
 
 const DEFAULT_COLUMNS = 80;
 const MARGIN = 1;
+const INDENT = 2;
 
-const RED = 31;
-const GREEN = 32;
-const YELLOW = 33;
-const DIM = 2;
+const GREEN = ink(Color.green);
+const YELLOW = ink(Color.yellow);
+const RED = ink(Color.red);
+const HEADING = ink(Color.green, Style.bold);
+const LEADER = ink(Style.dim);
+
+const TONES: Record<Tone, Ink> = {
+	good: ink(Color.green, Style.bold),
+	warn: ink(Color.yellow, Style.bold),
+};
 
 type Writer = (text: string) => void;
 
@@ -56,8 +64,7 @@ export class Terminal {
 	}
 
 	line(text = ''): this {
-		this.sinks.out(`${text}\n`);
-		return this;
+		return this.writeLine(this.sinks.out, text);
 	}
 
 	info(text = ''): this {
@@ -69,13 +76,11 @@ export class Terminal {
 	}
 
 	warn(text = ''): this {
-		this.sinks.err(`${this.paint(YELLOW, text)}\n`);
-		return this;
+		return this.alert(YELLOW, text);
 	}
 
 	error(text = ''): this {
-		this.sinks.err(`${this.paint(RED, text)}\n`);
-		return this;
+		return this.alert(RED, text);
 	}
 
 	newLine(count = 1): this {
@@ -83,8 +88,30 @@ export class Terminal {
 		return this;
 	}
 
+	/**
+	 * Write a label and a value, separated by a dotted leader.
+	 */
 	detail(label: string, value: string): this {
-		return this.line(detail({ label, value }, this.width, (dots) => this.paint(DIM, dots)));
+		const dots = (text: string) => this.paint(LEADER, text);
+
+		return this.line(detail({ label, value }, this.width(0), { dots }));
+	}
+
+	/**
+	 * Write a heading with its own leader, over indented rows.
+	 */
+	details(heading: string, rows: Detail[]): this {
+		const width = this.width(INDENT);
+		const dots = (text: string) => this.paint(LEADER, text);
+		const label = (text: string) => this.paint(HEADING, text);
+
+		this.indented(leader(heading, width, { label, dots }));
+
+		for (const row of rows) {
+			this.indented(detail(row, width, { dots, value: this.toned(row.tone) }));
+		}
+
+		return this;
 	}
 
 	sections(sections: Section[]): this {
@@ -110,15 +137,32 @@ export class Terminal {
 		return this.spinner().run(label, task);
 	}
 
+	private writeLine(to: Writer, text: string): this {
+		to(`${text}\n`);
+		return this;
+	}
+
+	private alert(ink: Ink, text: string): this {
+		return this.writeLine(this.sinks.err, this.paint(ink, text));
+	}
+
+	private indented(text: string): this {
+		return this.line(`${' '.repeat(INDENT)}${text}`);
+	}
+
+	private toned(tone: Tone | undefined): ((text: string) => string) | undefined {
+		return tone === undefined ? undefined : (text) => this.paint(TONES[tone], text);
+	}
+
 	private get columns(): number {
 		return this.sinks.columns() || DEFAULT_COLUMNS;
 	}
 
-	private get width(): number | null {
-		return this.sinks.aligned ? this.columns - MARGIN : null;
+	private width(indent: number): number | null {
+		return this.sinks.aligned ? this.columns - indent - MARGIN : null;
 	}
 
-	private paint(code: number, text: string): string {
-		return this.sinks.decorated && text ? `\x1b[${code}m${text}\x1b[0m` : text;
+	private paint(ink: Ink, text: string): string {
+		return this.sinks.decorated && text ? ink(text) : text;
 	}
 }

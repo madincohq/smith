@@ -1,4 +1,5 @@
 import { parseArgs, type ParseArgsConfig } from 'node:util';
+import { InvalidOption } from './exceptions/invalid-option.js';
 
 export interface Option<T> {
 	readonly kind: 'flag' | 'option' | 'number';
@@ -18,7 +19,7 @@ export interface Parsed<O extends Options> {
 	positionals: string[];
 }
 
-export class InvalidOption extends Error {}
+export { InvalidOption };
 
 export function flag(description: string, short?: string): Option<boolean> {
 	return { kind: 'flag', fallback: false, description, short };

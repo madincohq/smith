@@ -1,9 +1,11 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync, realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, isAbsolute, join, parse, resolve } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
+import { Files } from '../utils/files.js';
 
 const MANIFEST = 'package.json';
 const DEFAULT_COMMANDS = 'src/console/commands';
+const BIN = join('node_modules', '@madinco', 'smith', 'bin', 'smith.js');
 
 interface Manifest {
 	type?: string;
@@ -41,6 +43,12 @@ export function directories(location: Location): string[] {
 		: [location.global, location.project.commands];
 }
 
+export function binary(cwd: string): string | null {
+	const directory = Files.containing(cwd, BIN);
+
+	return directory === null ? null : realpathSync(join(directory, BIN));
+}
+
 export function target(location: Location): string {
 	return location.project === null ? location.global : location.project.commands;
 }
@@ -55,10 +63,7 @@ function globalHome(): string {
 }
 
 function findRoot(cwd: string): string | null {
-	for (let directory = resolve(cwd); ; directory = dirname(directory)) {
-		if (existsSync(join(directory, MANIFEST))) return directory;
-		if (directory === parse(directory).root) return null;
-	}
+	return Files.containing(cwd, MANIFEST);
 }
 
 function describe(root: string): Project {

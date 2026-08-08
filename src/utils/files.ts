@@ -1,5 +1,5 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
-import { dirname } from 'node:path';
+import { dirname, join, parse, resolve } from 'node:path';
 
 export interface File {
 	readonly path: string;
@@ -9,6 +9,13 @@ export interface File {
 export const Files = {
 	existing(files: File[]): string[] {
 		return files.filter((file) => existsSync(file.path)).map((file) => file.path);
+	},
+
+	containing(from: string, target: string): string | null {
+		for (let directory = resolve(from); ; directory = dirname(directory)) {
+			if (existsSync(join(directory, target))) return directory;
+			if (directory === parse(directory).root) return null;
+		}
 	},
 
 	write(files: File[]): void {
