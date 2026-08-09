@@ -75,7 +75,7 @@ export class Kernel {
 		try {
 			const module: Record<string, unknown> = await import(pathToFileURL(path).href);
 
-			for (const exported of Object.values(module)) {
+			for (const exported of candidates(module)) {
 				if (!constructs(exported)) continue;
 
 				const command = new exported();
@@ -156,6 +156,16 @@ export class Kernel {
 
 		return Command.FAILURE;
 	}
+}
+
+function candidates(module: Record<string, unknown>): unknown[] {
+	const exported = Object.values(module);
+
+	return [...exported, ...exported.filter(grouped).flatMap((value) => Object.values(value))];
+}
+
+function grouped(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
 }
 
 function constructs(exported: unknown): exported is Constructor {

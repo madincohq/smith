@@ -9,9 +9,7 @@ const nearest = binary(process.cwd());
 if (nearest !== null && nearest !== self) {
 	await import(pathToFileURL(nearest).href);
 } else {
-	const { register } = await import('tsx/esm/api');
-
-	register();
+	await import('jiti/register');
 
 	const { run } = await import('../dist/cli/run.js');
 

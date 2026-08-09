@@ -318,6 +318,25 @@ describe('discover', () => {
 		expect(out.join('')).not.toContain('Shared by other commands');
 	});
 
+	it('registers a command exported inside an object', async () => {
+		writeFileSync(
+			join(directory, 'grouped.ts'),
+			`import { Command } from '@';
+			class Generated extends Command {
+				readonly name = 'grouped';
+				readonly description = 'Generated for a test';
+				handle() { this.line('ran'); return Command.SUCCESS; }
+			}
+			export default { Generated };`
+		);
+
+		const { out, kernel } = recorder();
+		await kernel.discover(directory);
+
+		expect(await kernel.handle(['grouped'])).toBe(Command.SUCCESS);
+		expect(out.join('')).toContain('ran');
+	});
+
 	it('survives a directory that does not exist', async () => {
 		const { kernel } = recorder();
 
