@@ -32,8 +32,9 @@ export class ReleaseCommand extends Command {
 		}
 
 		this.newLine().details('Releasing', [
-			{ label: 'From', value: version() },
 			{ label: 'Bump', value: level },
+			{ label: 'From', value: version() },
+			{ label: 'To', value: next(version(), level), tone: 'good' },
 			{ label: 'Branch', value: read('git', ['rev-parse', '--abbrev-ref', 'HEAD']) },
 		]);
 
@@ -70,7 +71,7 @@ export class ReleaseCommand extends Command {
 	private async confirmsPublish(level: string): Promise<boolean> {
 		if (this.option('force')) return true;
 
-		return this.confirm(`Publish ${version()} as a ${level} release?`);
+		return this.confirm(`Publish ${next(version(), level)}?`);
 	}
 
 	private step(label: string, command: string, args: string[]): void {
@@ -82,6 +83,15 @@ export class ReleaseCommand extends Command {
 
 function run(command: string, args: string[]): void {
 	execFileSync(command, args, { stdio: 'inherit' });
+}
+
+function next(current: string, level: string): string {
+	const [major = 0, minor = 0, patch = 0] = current.split('.').map(Number);
+
+	if (level === 'major') return `${major + 1}.0.0`;
+	if (level === 'minor') return `${major}.${minor + 1}.0`;
+
+	return `${major}.${minor}.${patch + 1}`;
 }
 
 function version(): string {
