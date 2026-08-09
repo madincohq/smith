@@ -25,11 +25,10 @@ function outside(): Location {
 	return { cwd: directory, home, global: join(home, 'commands'), project: null };
 }
 
-function inside(module = true): Location {
+function inside(): Location {
 	const project: Project = {
 		root: directory,
 		commands: join(directory, 'src', 'console', 'commands'),
-		module,
 	};
 
 	return { ...outside(), project };
@@ -153,10 +152,12 @@ describe('handle', () => {
 	});
 
 	it('writes a launcher that delegates to the package', async () => {
-		await harness(inside()).kernel.handle(['init', '--shim']);
+		const { err, kernel } = harness(inside());
+		await kernel.handle(['init', '--shim']);
 
+		expect(err).toEqual([]);
 		expect(readFileSync(join(directory, 'smith'), 'utf8')).toContain(
-			"import '@madinco/smith/bin'"
+			"import('@madinco/smith/bin')"
 		);
 	});
 
@@ -166,12 +167,12 @@ describe('handle', () => {
 		expect(statSync(join(directory, 'smith')).mode & 0o111).not.toBe(0);
 	});
 
-	it('refuses the launcher when the project is not an ES module', async () => {
-		const { err, kernel } = harness(inside(false));
-		await kernel.handle(['init', '--shim']);
+	it('imports dynamically, so a CommonJS project can run the launcher', async () => {
+		await harness(inside()).kernel.handle(['init', '--shim']);
 
-		expect(err.join('')).toContain('not "type": "module"');
-		expect(existsSync(join(directory, 'smith'))).toBe(false);
+		const shim = readFileSync(join(directory, 'smith'), 'utf8');
+
+		expect(shim).not.toContain("import '");
 	});
 
 	it('leaves an existing launcher alone', async () => {

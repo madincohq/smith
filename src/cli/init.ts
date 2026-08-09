@@ -6,7 +6,7 @@ import { flag } from '../options.js';
 import type { Location, Project } from './resolve.js';
 
 const SHIM = `#!/usr/bin/env node
-import '@madinco/smith/bin';
+import('@madinco/smith/bin');
 `;
 
 const MANIFEST = `{
@@ -88,11 +88,6 @@ export class InitCommand extends Command {
 	}
 
 	private launcher(project: Project): void {
-		if (!project.module) {
-			this.warn('Skipped ./smith: the project is not "type": "module". Use "pnpm exec smith".');
-			return;
-		}
-
 		const path = join(project.root, 'smith');
 
 		if (existsSync(path)) {

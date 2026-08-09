@@ -65,14 +65,18 @@ describe('locate', () => {
 		expect(locate(root).project?.commands).toBe('/opt/commands');
 	});
 
-	it('notes whether the project is an ES module', () => {
-		const esm = join(directory, 'esm');
-		const cjs = join(directory, 'cjs');
-		manifest(esm, { type: 'module' });
-		manifest(cjs, {});
+	it('finds an ES module project', () => {
+		const root = join(directory, 'esm');
+		manifest(root, { type: 'module' });
 
-		expect(locate(esm).project?.module).toBe(true);
-		expect(locate(cjs).project?.module).toBe(false);
+		expect(locate(root).project?.root).toBe(root);
+	});
+
+	it('finds a CommonJS project', () => {
+		const root = join(directory, 'cjs');
+		manifest(root, {});
+
+		expect(locate(root).project?.root).toBe(root);
 	});
 
 	it('survives a manifest that is not valid JSON', () => {

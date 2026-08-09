@@ -15,7 +15,6 @@ interface Manifest {
 export interface Project {
 	readonly root: string;
 	readonly commands: string;
-	readonly module: boolean;
 }
 
 export interface Location {
@@ -73,7 +72,6 @@ function describe(root: string): Project {
 	return {
 		root,
 		commands: isAbsolute(declared) ? declared : join(root, declared),
-		module: manifest.type === 'module',
 	};
 }
 
