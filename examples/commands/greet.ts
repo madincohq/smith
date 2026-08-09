@@ -1,16 +1,19 @@
-import { Command, flag, option } from '@madinco/smith';
+import { Command, argument, flag } from '@madinco/smith';
 
 export class GreetCommand extends Command {
 	readonly name = 'greet';
-	readonly description = 'Say hello';
+	readonly description = 'Say hello to someone';
+
+	readonly arguments = {
+		name: argument('Who to greet'),
+	};
 
 	readonly options = {
-		name: option('world', 'Who to greet', 'n'),
 		loud: flag('Shout it'),
 	};
 
 	handle(): number {
-		const greeting = `Hello, ${this.option('name')}`;
+		const greeting = `Hello, ${this.argument('name')}`;
 
 		this.info(this.option('loud') ? greeting.toUpperCase() : greeting);
 

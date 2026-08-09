@@ -73,57 +73,86 @@ Point a project somewhere else in its `package.json`:
 ## Writing a command
 
 ```sh
-smith make:command deploy:staging --description "Ship the staging build"
+smith make:command greet --description "Say hello to someone"
 ```
 
 ```ts
-import { Command, flag, option } from '@madinco/smith';
+import { Command, argument, flag } from '@madinco/smith';
 
-export class DeployStagingCommand extends Command {
-	readonly name = 'deploy:staging';
-	readonly description = 'Ship the staging build';
+export class GreetCommand extends Command {
+	readonly name = 'greet';
+	readonly description = 'Say hello to someone';
 
-	readonly options = {
-		branch: option('main', 'Branch to deploy', 'b'),
-		dry: flag('Print what would happen and stop'),
+	readonly arguments = {
+		name: argument('Who to greet'),
 	};
 
-	async handle(): Promise<number> {
-		const target = this.argument() ?? this.option('branch');
+	readonly options = {
+		loud: flag('Shout it'),
+	};
 
-		if (this.project === null) {
-			this.error('Run this inside a project.');
-			return Command.INVALID;
-		}
+	handle(): number {
+		const greeting = `Hello, ${this.argument('name')}`;
 
-		await this.spin(`Deploying ${target}`, () => ship(target));
-
-		this.info('Done.');
+		this.info(this.option('loud') ? greeting.toUpperCase() : greeting);
 
 		return Command.SUCCESS;
 	}
 }
 ```
 
-`this.project` is the project root, or `null` outside one. `this.cwd` is where the
-command was invoked, which is not the same thing when you run from a subdirectory.
+Within a command, `this.project` contains the project root, or `null` when you are not
+inside a project. `this.cwd` contains the directory you ran the command from, which will
+differ from the project root when you run smith from a subdirectory.
+
+## Arguments and options
+
+You may declare the arguments and options a command accepts using the `arguments` and
+`options` properties. Smith uses these declarations to type the values you read back, and
+to build the command's help output.
+
+```ts
+readonly arguments = {
+	target: argument('Required'),
+	branch: optional('main', 'Optional, with a default'),
+	comment: maybe('Optional, undefined when absent'),
+	files: rest('Collects the remainder, and must come last'),
+};
+
+readonly options = {
+	quality: number(75, 'A number', 'q'),
+	name: option('world', 'A string'),
+	dry: flag('True when present'),
+};
+```
+
+Each value is typed from its declaration, so `this.argument('files')` returns a `string[]`
+and `this.option('quality')` returns a `number`. Requesting a name you have not declared
+will not compile.
+
+Any argument you have not declared is rejected. A mistyped argument, or a glob that matched
+more files than you expected, will fail rather than being silently ignored.
 
 ## Running a command
 
 ```sh
-smith deploy:staging feature/checkout --branch=main --dry
+smith greet world --loud
 ```
 
-`feature/checkout` is `this.argument()`, positional and optional. `--branch=main` is
-`this.option('branch')`, and accepts `-b main` because the option declared a short form.
-`--dry` is a flag, true when present and false otherwise.
+Here, `world` is `this.argument('name')` and `--loud` is `this.option('loud')`.
 
-`smith` on its own lists every command it found. `smith deploy:staging --help` prints one
-command's description, usage and options.
+Running `smith` on its own lists every command it found. Running `smith greet --help`
+prints that command's description, usage, arguments and options.
 
 ## Output
 
 `line`, `info`, `comment`, `warn`, `error`, `newLine`, `sections` for text.
+
+The `detail` method prints a label and a value separated by a line of dots. The `details`
+method groups several of those rows beneath a heading, and each row may carry a `tone` of
+`good` or `warn` to colour its value. When the output is piped, both fall back to
+`label: value`.
+
 `spin(label, task)` for indeterminate work, `progress(total)` for a bar. Both write to
 stderr and degrade to plain lines when the output is not a TTY.
 
@@ -132,6 +161,11 @@ stderr and degrade to plain lines when the output is not a TTY.
 Return one from `handle`. `Command.SUCCESS` (0), `Command.FAILURE` (1),
 `Command.INVALID` (2). A thrown error becomes `FAILURE`, an unknown option becomes
 `INVALID`.
+
+## Examples
+
+`examples/` holds runnable commands covering each of these. See its
+[README](examples/README.md).
 
 ## Contributing
 
