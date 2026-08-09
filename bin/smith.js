@@ -9,7 +9,9 @@ const nearest = binary(process.cwd());
 if (nearest !== null && nearest !== self) {
 	await import(pathToFileURL(nearest).href);
 } else {
-	await import('jiti/register');
+	const { loader } = await import('../dist/cli/loader.js');
+
+	await loader();
 
 	const { run } = await import('../dist/cli/run.js');
 
