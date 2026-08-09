@@ -216,6 +216,89 @@ describe('details', () => {
 	});
 });
 
+describe('ask', () => {
+	it('returns what was answered', async () => {
+		const { terminal } = harness({ ask: async () => 'topic' });
+
+		expect(await terminal.ask('Which branch?')).toBe('topic');
+	});
+
+	it('puts the question to the sink', async () => {
+		const asked: string[] = [];
+		const { terminal } = harness({
+			ask: async (question) => {
+				asked.push(question);
+
+				return 'topic';
+			},
+		});
+
+		await terminal.ask('Which branch?');
+
+		expect(asked).toEqual(['Which branch? ']);
+	});
+
+	it('falls back when the answer is empty', async () => {
+		const { terminal } = harness({ ask: async () => '  ' });
+
+		expect(await terminal.ask('Which branch?', 'main')).toBe('main');
+	});
+
+	it('falls back when there is nothing to read', async () => {
+		const { terminal } = harness();
+
+		expect(await terminal.ask('Which branch?', 'main')).toBe('main');
+	});
+});
+
+describe('confirm', () => {
+	it('takes yes', async () => {
+		for (const said of ['y', 'Y', 'yes', 'YES', ' yes ']) {
+			const { terminal } = harness({ ask: async () => said });
+
+			expect(await terminal.confirm('Ship it?')).toBe(true);
+		}
+	});
+
+	it('takes anything else as no', async () => {
+		for (const said of ['n', 'no', 'nope', 'maybe']) {
+			const { terminal } = harness({ ask: async () => said });
+
+			expect(await terminal.confirm('Ship it?')).toBe(false);
+		}
+	});
+
+	it('marks which way an empty answer goes', async () => {
+		const asked: string[] = [];
+		const { terminal } = harness({
+			ask: async (question) => {
+				asked.push(question);
+
+				return '';
+			},
+		});
+
+		await terminal.confirm('Ship it?');
+		await terminal.confirm('Ship it?', true);
+
+		expect(asked).toEqual(['Ship it? [y/N] ', 'Ship it? [Y/n] ']);
+	});
+
+	it('falls back on an empty answer', async () => {
+		const { terminal } = harness({ ask: async () => '' });
+
+		expect(await terminal.confirm('Ship it?')).toBe(false);
+		expect(await terminal.confirm('Ship it?', true)).toBe(true);
+	});
+
+	it('falls back when there is nothing to read, rather than waiting', async () => {
+		const { terminal } = harness();
+
+		expect(await terminal.confirm('Ship it?')).toBe(false);
+		expect(await terminal.confirm('Ship it?', true)).toBe(true);
+	});
+});
+
 describe('progress', () => {
 	it('draws to stderr at the terminal width', () => {
 		const { err, terminal } = harness({ columns: () => 40 });

@@ -80,6 +80,14 @@ export abstract class Command {
 		return this;
 	}
 
+	ask(question: string, fallback?: string): Promise<string> {
+		return this.terminal.ask(question, fallback);
+	}
+
+	confirm(question: string, fallback?: boolean): Promise<boolean> {
+		return this.terminal.confirm(question, fallback);
+	}
+
 	newLine(count?: number): this {
 		this.terminal.newLine(count);
 		return this;

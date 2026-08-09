@@ -13,6 +13,7 @@ export class ReleaseCommand extends Command {
 
 	readonly options = {
 		dry: flag('Say what would happen and stop'),
+		force: flag('Publish without confirming'),
 	};
 
 	async handle(): Promise<number> {
@@ -42,20 +43,21 @@ export class ReleaseCommand extends Command {
 			return Command.SUCCESS;
 		}
 
-		this.newLine();
+		const confirmed = await this.confirmsPublish(level);
 
-		await this.spin('Typechecking', () => read('pnpm', ['run', 'typecheck']));
-		await this.spin('Running the tests', () => read('pnpm', ['run', 'test:run']));
-		await this.spin('Building', () => read('pnpm', ['run', 'build']));
+		if (!confirmed) {
+			this.comment('Nothing was published.');
 
-		read('pnpm', ['version', level]);
+			return Command.SUCCESS;
+		}
 
-		this.info(`Publishing ${version()}`).newLine();
-
-		interactive('pnpm', ['publish', '--access', 'public']);
-
-		read('git', ['push']);
-		read('git', ['push', '--tags']);
+		this.step('Typechecking', 'pnpm', ['run', 'typecheck']);
+		this.step('Running the tests', 'pnpm', ['run', 'test:run']);
+		this.step('Building', 'pnpm', ['run', 'build']);
+		this.step(`Bumping the ${level} version`, 'pnpm', ['version', level]);
+		this.step(`Publishing ${version()}`, 'pnpm', ['publish', '--access', 'public']);
+		this.step('Pushing', 'git', ['push']);
+		this.step('Pushing the tag', 'git', ['push', '--tags']);
 
 		this.newLine().details('Released', [
 			{ label: 'Version', value: version(), tone: 'good' },
@@ -64,6 +66,22 @@ export class ReleaseCommand extends Command {
 
 		return Command.SUCCESS;
 	}
+
+	private async confirmsPublish(level: string): Promise<boolean> {
+		if (this.option('force')) return true;
+
+		return this.confirm(`Publish ${version()} as a ${level} release?`);
+	}
+
+	private step(label: string, command: string, args: string[]): void {
+		this.newLine().comment(label);
+
+		run(command, args);
+	}
+}
+
+function run(command: string, args: string[]): void {
+	execFileSync(command, args, { stdio: 'inherit' });
 }
 
 function version(): string {
@@ -80,8 +98,4 @@ function read(command: string, args: string[]): string {
 			`${command} ${args.join(' ')} failed.\n${failure.stderr ?? ''}${failure.stdout ?? ''}`.trim()
 		);
 	}
-}
-
-function interactive(command: string, args: string[]): void {
-	execFileSync(command, args, { stdio: 'inherit' });
 }

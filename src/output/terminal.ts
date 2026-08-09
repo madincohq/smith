@@ -1,3 +1,4 @@
+import { createInterface } from 'node:readline/promises';
 import { Spinner } from './spinner.js';
 import { Progress, type ProgressBar } from './progress.js';
 import { detail, leader, type Detail, type Tone } from './detail.js';
@@ -19,6 +20,7 @@ const TONES: Record<Tone, Ink> = {
 };
 
 type Writer = (text: string) => void;
+type Asker = (question: string) => Promise<string | null>;
 
 export interface Section {
 	title: string;
@@ -32,6 +34,7 @@ export interface Sinks {
 	decorated?: boolean;
 	aligned?: boolean;
 	interactive?: boolean;
+	ask?: Asker;
 }
 
 export class Terminal {
@@ -45,6 +48,7 @@ export class Terminal {
 			decorated: sinks.decorated ?? false,
 			aligned: sinks.aligned ?? false,
 			interactive: sinks.interactive ?? false,
+			ask: sinks.ask ?? (async () => null),
 		};
 	}
 
@@ -56,6 +60,7 @@ export class Terminal {
 			decorated: Boolean(process.stdout.isTTY) && !process.env.NO_COLOR,
 			aligned: Boolean(process.stdout.isTTY),
 			interactive: Boolean(process.stderr.isTTY),
+			ask: prompt,
 		});
 	}
 
@@ -81,6 +86,21 @@ export class Terminal {
 
 	error(text = ''): this {
 		return this.alert(RED, text);
+	}
+
+	async ask(question: string, fallback = ''): Promise<string> {
+		const answer = await this.sinks.ask(`${question} `);
+
+		return answer?.trim() || fallback;
+	}
+
+	async confirm(question: string, fallback = false): Promise<boolean> {
+		const answer = await this.sinks.ask(`${question} ${fallback ? '[Y/n]' : '[y/N]'} `);
+		const said = answer?.trim().toLowerCase();
+
+		if (said === undefined || said === '') return fallback;
+
+		return said === 'y' || said === 'yes';
 	}
 
 	newLine(count = 1): this {
@@ -164,5 +184,17 @@ export class Terminal {
 
 	private paint(ink: Ink, text: string): string {
 		return this.sinks.decorated && text ? ink(text) : text;
+	}
+}
+
+async function prompt(question: string): Promise<string | null> {
+	if (!process.stdin.isTTY) return null;
+
+	const readline = createInterface({ input: process.stdin, output: process.stderr });
+
+	try {
+		return await readline.question(question);
+	} finally {
+		readline.close();
 	}
 }
