@@ -1,7 +1,16 @@
+export {
+	argument,
+	maybe,
+	optional,
+	rest,
+	type Argument,
+	type Arguments,
+} from './arguments.js';
 export { Command } from './command.js';
 export { MakeCommand } from './commands/make.js';
 export { detached, type Context } from './context.js';
 export { Kernel } from './kernel.js';
+export { InvalidArgument } from './exceptions/invalid-argument.js';
 export { InvalidOption } from './exceptions/invalid-option.js';
 export { renders, type Renders } from './exceptions/renders.js';
 export {

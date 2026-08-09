@@ -1,4 +1,5 @@
 import { detached, type Context } from './context.js';
+import { bind, type Arguments } from './arguments.js';
 import { parse, type Options, type Value } from './options.js';
 import { Terminal, type Section } from './output/terminal.js';
 import type { Detail } from './output/detail.js';
@@ -17,12 +18,13 @@ export abstract class Command {
 	abstract readonly name: string;
 	abstract readonly description: string;
 
+	readonly arguments: Arguments = {};
 	readonly options: Options = {};
 
 	private terminal = Terminal.silent();
 	private context = detached();
 	private values: Record<string, unknown> = {};
-	private positionals: string[] = [];
+	private taken: Record<string, unknown> = {};
 
 	abstract handle(): Promise<number> | number;
 
@@ -32,7 +34,7 @@ export abstract class Command {
 		this.terminal = terminal;
 		this.context = context;
 		this.values = parsed.values;
-		this.positionals = parsed.positionals;
+		this.taken = bind(parsed.positionals, this.arguments, this.name);
 
 		return this.handle();
 	}
@@ -49,8 +51,8 @@ export abstract class Command {
 		return this.values[key as string] as Value<this['options'][K]>;
 	}
 
-	argument(index = 0): string | undefined {
-		return this.positionals[index];
+	argument<K extends keyof this['arguments']>(key: K): Value<this['arguments'][K]> {
+		return this.taken[key as string] as Value<this['arguments'][K]>;
 	}
 
 	line(text?: string): this {
@@ -83,11 +85,17 @@ export abstract class Command {
 		return this;
 	}
 
+	/**
+	 * Write a label and a value, separated by a dotted leader.
+	 */
 	detail(label: string, value: string): this {
 		this.terminal.detail(label, value);
 		return this;
 	}
 
+	/**
+	 * Write a heading with its own leader, over indented rows.
+	 */
 	details(heading: string, rows: Detail[]): this {
 		this.terminal.details(heading, rows);
 		return this;

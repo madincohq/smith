@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { Command, Terminal, flag, number, option, type Sinks } from '@';
+import { Command, Terminal, flag, maybe, number, option, type Sinks } from '@';
 
 class GreetCommand extends Command {
 	readonly name = 'greet';
 	readonly description = 'Say hello';
+
+	readonly arguments = {
+		first: maybe('First thing'),
+		second: maybe('Second thing'),
+	};
 
 	readonly options = {
 		name: option('world', 'Who to greet'),
@@ -19,8 +24,8 @@ class GreetCommand extends Command {
 			name: this.option('name'),
 			times: this.option('times'),
 			loud: this.option('loud'),
-			first: this.argument(),
-			second: this.argument(1),
+			first: this.argument('first'),
+			second: this.argument('second'),
 		};
 
 		return Command.SUCCESS;
@@ -111,7 +116,7 @@ describe('option', () => {
 });
 
 describe('argument', () => {
-	it('reads positionals by index', async () => {
+	it('reads positionals by name', async () => {
 		const { terminal } = recorder();
 		const command = new GreetCommand();
 

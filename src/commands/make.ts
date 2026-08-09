@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { Command } from '../command.js';
+import { argument } from '../arguments.js';
 import { Files } from '../utils/files.js';
 import { flag, option } from '../options.js';
 import { Stubs } from '../utils/stubs.js';
@@ -9,6 +10,10 @@ const NAME = /^[a-z0-9]+(?:[:-][a-z0-9]+)*$/;
 export class MakeCommand extends Command {
 	readonly name = 'make:command';
 	readonly description = 'Create a new command class';
+
+	readonly arguments = {
+		name: argument('Name of the command, as in cache:clear'),
+	};
 
 	readonly options = {
 		description: option('Command description', 'Description of the generated command'),
@@ -20,12 +25,7 @@ export class MakeCommand extends Command {
 	}
 
 	handle(): number {
-		const name = this.argument();
-
-		if (name === undefined) {
-			this.error('Give the command a name, as in "make:command cache:clear".');
-			return Command.INVALID;
-		}
+		const name = this.argument('name');
 
 		if (!NAME.test(name)) {
 			this.error(`"${name}" is not a valid command name. Use lower-case words separated by : or -.`);

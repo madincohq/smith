@@ -10,7 +10,7 @@ export interface Option<T> {
 
 export type Options = Record<string, Option<unknown>>;
 
-export type Value<O> = O extends Option<infer T> ? T : never;
+export type Value<O> = O extends { fallback: infer T } ? T : never;
 
 export type Values<O extends Options> = { [K in keyof O]: Value<O[K]> };
 

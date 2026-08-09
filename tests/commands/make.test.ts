@@ -84,7 +84,7 @@ describe('handle', () => {
 		const { err, kernel } = harness();
 
 		expect(await kernel.handle(['make:command'])).toBe(Command.INVALID);
-		expect(err.join('')).toContain('Give the command a name');
+		expect(err.join('')).toContain('Not enough arguments (missing: "name").');
 	});
 
 	it('rejects a name that is not a valid command name', async () => {

@@ -1,23 +1,48 @@
+import type { Argument, Arguments } from '../arguments.js';
 import type { Option, Options } from '../options.js';
 import type { Section } from './terminal.js';
+
+const SILENT = new Set(['flag', 'required', 'rest']);
 
 export interface Described {
 	readonly name: string;
 	readonly description: string;
+	readonly arguments: Arguments;
 	readonly options: Options;
 }
 
 export function usage(command: Described): Section[] {
+	const positional = Object.entries(command.arguments);
 	const declared = Object.entries(command.options);
 
 	const sections: Section[] = [
 		{ title: 'Description', lines: [command.description] },
-		{ title: 'Usage', lines: [`${command.name}${declared.length > 0 ? ' [options]' : ''}`] },
+		{ title: 'Usage', lines: [invocation(command)] },
 	];
 
+	if (positional.length > 0) sections.push({ title: 'Arguments', lines: columns(takes(positional)) });
 	if (declared.length > 0) sections.push({ title: 'Options', lines: columns(rows(declared)) });
 
 	return sections;
+}
+
+function invocation(command: Described): string {
+	const parts = Object.entries(command.arguments).map(([name, taken]) => placeholder(name, taken));
+
+	if (Object.keys(command.options).length > 0) parts.push('[options]');
+
+	return [command.name, ...parts].join(' ');
+}
+
+function placeholder(name: string, taken: Argument<unknown>): string {
+	if (taken.kind === 'required') return `<${name}>`;
+	if (taken.kind === 'rest') return `[${name}...]`;
+
+	return `[${name}]`;
+}
+
+function takes(entries: [string, Argument<unknown>][]): [string, string][] {
+	return entries.map(([name, taken]) => [name, `${taken.description}${fallback(taken)}`]);
 }
 
 export function listing(commands: Described[]): Section[] {
@@ -53,8 +78,10 @@ function signature(name: string, option: Option<unknown>): string {
 		: `${alias}--${name}[=${name.toUpperCase()}]`;
 }
 
-function fallback(option: Option<unknown>): string {
-	if (option.kind === 'flag' || option.fallback === '') return '';
+function fallback(declared: Option<unknown> | Argument<unknown>): string {
+	const shown = declared.fallback !== '' && declared.fallback !== undefined;
 
-	return ` [default: ${JSON.stringify(option.fallback)}]`;
+	if (!shown || SILENT.has(declared.kind)) return '';
+
+	return ` [default: ${JSON.stringify(declared.fallback)}]`;
 }
