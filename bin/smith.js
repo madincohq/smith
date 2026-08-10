@@ -9,10 +9,6 @@ const nearest = binary(process.cwd());
 if (nearest !== null && nearest !== self) {
 	await import(pathToFileURL(nearest).href);
 } else {
-	const { loader } = await import('../dist/cli/loader.js');
-
-	await loader();
-
 	const { run } = await import('../dist/cli/run.js');
 
 	process.exit(await run(process.argv.slice(2), process.cwd()));

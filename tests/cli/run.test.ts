@@ -1,6 +1,7 @@
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Command, Terminal, type Sinks } from '@';
 import { run } from '@/cli/run';
@@ -9,6 +10,8 @@ let directory = '';
 let home = '';
 let project = '';
 
+const source = fileURLToPath(new URL('../../src', import.meta.url));
+const fixtures = fileURLToPath(new URL('./fixtures', import.meta.url));
 const environment = { ...process.env };
 
 function recorder() {
@@ -45,6 +48,31 @@ function locally(name: string, says: string): void {
 	command(join(project, 'src', 'console', 'commands'), name, says);
 }
 
+function importing(name: string, imports: string, lines: string[]): void {
+	const directory = join(project, 'src', 'console', 'commands');
+
+	mkdirSync(directory, { recursive: true });
+
+	writeFileSync(
+		join(directory, `${name}.ts`),
+		`import { Command } from '@';
+		${imports}
+		export class Generated extends Command {
+			readonly name = '${name}';
+			readonly description = 'Generated for a test';
+			handle() { ${lines.join(' ')} return Command.SUCCESS; }
+		}`
+	);
+}
+
+function installed(name: string): void {
+	const module = join(project, 'node_modules', name);
+
+	mkdirSync(module, { recursive: true });
+	writeFileSync(join(module, 'package.json'), JSON.stringify({ name, main: 'index.js' }));
+	copyFileSync(join(fixtures, `${name}.js`), join(module, 'index.js'));
+}
+
 beforeEach(() => {
 	directory = mkdtempSync(join(tmpdir(), 'smith-'));
 	home = join(directory, 'home');
@@ -52,6 +80,14 @@ beforeEach(() => {
 
 	mkdirSync(project, { recursive: true });
 	writeFileSync(join(project, 'package.json'), JSON.stringify({ name: 'site', type: 'module' }));
+	writeFileSync(
+		join(directory, 'tsconfig.json'),
+		JSON.stringify({
+			compilerOptions: {
+				paths: { '@': [join(source, 'index.ts')], '#support/*': [join(project, 'support', '*')] },
+			},
+		})
+	);
 
 	process.env.SMITH_HOME = home;
 	delete process.env.XDG_CONFIG_HOME;
@@ -125,6 +161,34 @@ describe('run', () => {
 		expect(out.join('')).toContain('clean');
 		expect(out.join('')).toContain('deploy');
 		expect(out.join('')).toContain('make:command');
+	});
+
+	it('leaves a dependency in node_modules to Node', async () => {
+		installed('esbuilt');
+
+		importing('capture', "import esbuilt from 'esbuilt';", [
+			'this.line(esbuilt.stamp());',
+			"this.line('shimmed: ' + esbuilt.shimmed);",
+		]);
+
+		const { out, err, terminal } = recorder();
+
+		expect(await run(['capture'], project, terminal)).toBe(Command.SUCCESS);
+		expect(err.join('')).toBe('');
+		expect(out.join('')).toContain(join('one', 'two'));
+		expect(out.join('')).toContain('shimmed: false');
+	});
+
+	it('resolves a tsconfig path alias from a command', async () => {
+		mkdirSync(join(project, 'support'), { recursive: true });
+		writeFileSync(join(project, 'support', 'site.ts'), "export const site = 'mco.localhost';");
+
+		importing('deploy', "import { site } from '#support/site';", ['this.line(site);']);
+
+		const { out, terminal } = recorder();
+
+		expect(await run(['deploy'], project, terminal)).toBe(Command.SUCCESS);
+		expect(out.join('')).toContain('mco.localhost');
 	});
 
 	it('reports an unknown command', async () => {

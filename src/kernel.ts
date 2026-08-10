@@ -15,6 +15,10 @@ const IGNORED = /^[._]/;
 
 type Constructor = new () => Command;
 
+export type Importer = (path: string) => Promise<Record<string, unknown>>;
+
+const native: Importer = (path) => import(pathToFileURL(path).href);
+
 interface Skip {
 	readonly path: string;
 	readonly reason?: string;
@@ -42,16 +46,16 @@ export class Kernel {
 		return this;
 	}
 
-	async discover(directory: string): Promise<this> {
+	async discover(directory: string, importer: Importer = native): Promise<this> {
 		const skipped: Skip[] = [];
 
-		await this.walk(directory, skipped);
+		await this.walk(directory, importer, skipped);
 		this.summarise(directory, skipped);
 
 		return this;
 	}
 
-	private async walk(directory: string, skipped: Skip[]): Promise<void> {
+	private async walk(directory: string, importer: Importer, skipped: Skip[]): Promise<void> {
 		if (!existsSync(directory)) return;
 
 		const entries = readdirSync(directory, { withFileTypes: true }).sort((one, other) =>
@@ -62,18 +66,18 @@ export class Kernel {
 			const path = join(directory, entry.name);
 
 			if (IGNORED.test(entry.name)) continue;
-			else if (entry.isDirectory()) await this.walk(path, skipped);
+			else if (entry.isDirectory()) await this.walk(path, importer, skipped);
 			else if (SOURCE.test(entry.name) && !entry.name.includes('.test.')) {
-				await this.load(path, skipped);
+				await this.load(path, importer, skipped);
 			}
 		}
 	}
 
-	private async load(path: string, skipped: Skip[]): Promise<void> {
+	private async load(path: string, importer: Importer, skipped: Skip[]): Promise<void> {
 		let found = false;
 
 		try {
-			const module: Record<string, unknown> = await import(pathToFileURL(path).href);
+			const module = await importer(path);
 
 			for (const exported of candidates(module)) {
 				if (!constructs(exported)) continue;

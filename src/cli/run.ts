@@ -1,6 +1,7 @@
 import { MakeCommand } from '../commands/make.js';
 import { Kernel } from '../kernel.js';
 import { Terminal } from '../output/terminal.js';
+import { importer } from './importer.js';
 import { InitCommand } from './init.js';
 import { directories, locate, target } from './resolve.js';
 
@@ -16,7 +17,9 @@ export async function run(
 		.add(new MakeCommand(target(location)))
 		.add(new InitCommand(location));
 
-	for (const directory of directories(location)) await kernel.discover(directory);
+	for (const directory of directories(location)) {
+		await kernel.discover(directory, importer(directory));
+	}
 
 	return kernel.handle(argv);
 }
