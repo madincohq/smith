@@ -27,4 +27,5 @@ export { Progress, ProgressBar, type ProgressOptions } from './output/progress.j
 export { Spinner, type SpinnerOptions } from './output/spinner.js';
 export { Terminal, type Section, type Sinks } from './output/terminal.js';
 export { Files, type File } from './utils/files.js';
+export { Find, type Found, type Matcher, type Search } from './utils/find.js';
 export { Stubs, type Replacements } from './utils/stubs.js';

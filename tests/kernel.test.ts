@@ -270,6 +270,15 @@ describe('discover', () => {
 		expect(err).toEqual([]);
 	});
 
+	it('ignores declaration files', async () => {
+		writeFileSync(join(directory, 'greet.d.ts'), 'export declare const helper: () => number;');
+
+		const { err, kernel } = recorder();
+		await kernel.discover(directory);
+
+		expect(err).toEqual([]);
+	});
+
 	it('skips a directory prefixed with an underscore', async () => {
 		mkdirSync(join(directory, '_support'));
 		generated(join('_support', 'greet.ts'), 'greet');

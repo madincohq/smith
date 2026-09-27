@@ -156,6 +156,26 @@ method groups several of those rows beneath a heading, and each row may carry a 
 `spin(label, task)` for indeterminate work, `progress(total)` for a bar. Both write to
 stderr and degrade to plain lines when the output is not a TTY.
 
+## Finding files
+
+```ts
+import { Find } from '@madinco/smith';
+
+Find.nearest(this.cwd, Find.containing('composer.json'));
+
+Find.within(root, {
+	include: Find.containing('composer.json', 'package.json'),
+	exclude: Find.named('node_modules', 'vendor'),
+});
+```
+
+`Find.nearest` returns the closest parent directory that matches, or `null`.
+`Find.within` returns paths relative to `root`, sorted. It doesn't look inside an included
+directory, never enters an excluded one, and doesn't follow symlinks.
+
+Matchers: `containing(...files)`, `named(...names)`, `glob(...patterns)`, `extension(...exts)`. Write your own as
+`(found) => boolean`, using `found.name`, `path`, `absolute` or `directory`.
+
 ## Exit codes
 
 Return one from `handle`. `Command.SUCCESS` (0), `Command.FAILURE` (1),

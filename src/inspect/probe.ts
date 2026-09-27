@@ -1,5 +1,6 @@
 import { existsSync, globSync, readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
+import { Files } from '../utils/files.js';
 
 const PRUNED = new Set(['node_modules', 'vendor', '.git']);
 
@@ -56,15 +57,7 @@ export class Probe {
 	}
 
 	json<T>(path: string): T | null {
-		return this.memo(`json:${path}`, () => {
-			const contents = this.text(path);
-
-			try {
-				return contents === null ? null : (JSON.parse(contents) as T);
-			} catch {
-				return null;
-			}
-		});
+		return this.memo(`json:${path}`, () => Files.json<T>(join(this.root, path)));
 	}
 
 	exists(path: string): boolean {

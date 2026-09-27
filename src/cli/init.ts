@@ -1,8 +1,10 @@
-import { existsSync, mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs';
-import { dirname, join, parse, relative } from 'node:path';
+import { existsSync, mkdirSync, symlinkSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { Command } from '../command.js';
 import { flag } from '../options.js';
+import { Files } from '../utils/files.js';
+import { Find } from '../utils/find.js';
 import type { Location, Project } from './resolve.js';
 
 const SHIM = `#!/usr/bin/env node
@@ -101,17 +103,13 @@ export class InitCommand extends Command {
 }
 
 function self(): { root: string; name: string } {
-	for (let directory = dirname(fileURLToPath(import.meta.url)); ; directory = dirname(directory)) {
-		const manifest = join(directory, 'package.json');
+	const root = Find.nearest(dirname(fileURLToPath(import.meta.url)), (found) => Boolean(nameIn(found.absolute)));
 
-		if (existsSync(manifest)) {
-			const { name } = JSON.parse(readFileSync(manifest, 'utf8')) as { name?: string };
+	if (root === null) throw new Error('Could not find the smith package on disk.');
 
-			if (name) return { root: directory, name };
-		}
+	return { root, name: nameIn(root) as string };
+}
 
-		if (directory === parse(directory).root) {
-			throw new Error('Could not find the smith package on disk.');
-		}
-	}
+function nameIn(directory: string): string | undefined {
+	return Files.json<{ name?: string }>(join(directory, 'package.json'))?.name;
 }

@@ -102,3 +102,31 @@ describe('write', () => {
 		expect(existsSync(directory)).toBe(true);
 	});
 });
+
+describe('json', () => {
+	it('reads a json file', () => {
+		const path = GivenFile('package.json', '{"name":"@madinco/smith"}');
+
+		expect(WhenReadingJson(path)).toEqual({ name: '@madinco/smith' });
+	});
+
+	it('returns null for a missing file', () => {
+		expect(WhenReadingJson(join(directory, 'package.json'))).toBeNull();
+	});
+
+	it('returns null for invalid json', () => {
+		const path = GivenFile('package.json', '{ "name": ');
+
+		expect(WhenReadingJson(path)).toBeNull();
+	});
+});
+
+function GivenFile(name: string, contents: string): string {
+	writeFileSync(join(directory, name), contents);
+
+	return join(directory, name);
+}
+
+function WhenReadingJson(path: string): unknown {
+	return Files.json(path);
+}

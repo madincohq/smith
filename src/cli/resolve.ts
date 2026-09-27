@@ -1,4 +1,4 @@
-import { readFileSync, realpathSync } from 'node:fs';
+import { realpathSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { Files } from '../utils/files.js';
@@ -76,9 +76,5 @@ function describe(root: string): Project {
 }
 
 function read(root: string): Manifest {
-	try {
-		return JSON.parse(readFileSync(join(root, MANIFEST), 'utf8')) as Manifest;
-	} catch {
-		return {};
-	}
+	return Files.json<Manifest>(join(root, MANIFEST)) ?? {};
 }

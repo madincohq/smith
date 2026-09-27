@@ -1,4 +1,3 @@
-import { existsSync, readdirSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { COMMAND, Command } from './command.js';
@@ -8,6 +7,7 @@ import { ListCommand } from './commands/list.js';
 import { detached, type Context } from './context.js';
 import { renders } from './exceptions/renders.js';
 import { Terminal } from './output/terminal.js';
+import { Find } from './utils/find.js';
 
 const ASKING = ['--help', '-h'];
 const SOURCE = /(?<!\.d)\.ts$|\.js$/;
@@ -56,21 +56,12 @@ export class Kernel {
 	}
 
 	private async walk(directory: string, importer: Importer, skipped: Skip[]): Promise<void> {
-		if (!existsSync(directory)) return;
+		const sources = Find.within(directory, {
+			include: (found) => !found.directory && SOURCE.test(found.name) && !found.name.includes('.test.'),
+			exclude: (found) => IGNORED.test(found.name),
+		});
 
-		const entries = readdirSync(directory, { withFileTypes: true }).sort((one, other) =>
-			one.name.localeCompare(other.name)
-		);
-
-		for (const entry of entries) {
-			const path = join(directory, entry.name);
-
-			if (IGNORED.test(entry.name)) continue;
-			else if (entry.isDirectory()) await this.walk(path, importer, skipped);
-			else if (SOURCE.test(entry.name) && !entry.name.includes('.test.')) {
-				await this.load(path, importer, skipped);
-			}
-		}
+		for (const path of sources) await this.load(join(directory, path), importer, skipped);
 	}
 
 	private async load(path: string, importer: Importer, skipped: Skip[]): Promise<void> {
