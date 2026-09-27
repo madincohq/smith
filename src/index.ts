@@ -35,3 +35,4 @@ export { Spinner, type SpinnerOptions } from './output/spinner.js';
 export { Terminal, type Section, type Sinks } from './output/terminal.js';
 export { Files, type WriteFile } from './utils/files.js';
 export { Stubs, type Replacements } from './utils/stubs.js';
+export { Transaction, type Step } from './utils/transaction.js';

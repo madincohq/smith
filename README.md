@@ -193,6 +193,24 @@ Collections are iterable and provide `map`, `filter`, `reject`, `each`, `first`,
 `last`, `contains`, `isEmpty`, `count`, and `pluck`. `map`, `filter`, `reject`, and
 `pluck` return new collections. Use `toArray()` when you need a plain array.
 
+## Transactions
+
+`Transaction` runs up steps in order. If one throws, it runs the down steps in reverse
+order, including the failing step in case it changed state before throwing.
+
+```ts
+import { Transaction } from '@madinco/smith';
+
+await new Transaction().run([
+	{ up: () => prepare(), down: () => restore() },
+	{ up: () => publish() },
+]);
+```
+
+Provide a down step for each reversible action. Down steps should tolerate an action
+that failed partway through. If any rollback fails, Smith throws an `AggregateError`
+containing the original failure and rollback failures.
+
 ## Output
 
 `line`, `info`, `comment`, `warn`, `error`, `newLine`, `sections` for text.
