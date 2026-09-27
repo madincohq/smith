@@ -13,6 +13,8 @@ export { Kernel, type Importer } from './kernel.js';
 export { InvalidArgument } from './exceptions/invalid-argument.js';
 export { InvalidOption } from './exceptions/invalid-option.js';
 export { renders, type Renders } from './exceptions/renders.js';
+export { Directory } from './filesystem/directory.js';
+export { File } from './filesystem/file.js';
 export {
 	flag,
 	number,
@@ -26,5 +28,5 @@ export { listing, usage, type Described } from './output/help.js';
 export { Progress, ProgressBar, type ProgressOptions } from './output/progress.js';
 export { Spinner, type SpinnerOptions } from './output/spinner.js';
 export { Terminal, type Section, type Sinks } from './output/terminal.js';
-export { Files, type File } from './utils/files.js';
+export { Files, type WriteFile } from './utils/files.js';
 export { Stubs, type Replacements } from './utils/stubs.js';
