@@ -7,6 +7,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- `Transaction`, for running steps that roll back in reverse order when one fails
+
+## [0.2.0] - 2026-09-29
+
+### Added
+
 - `File`, `Directory` and `Symlink` models for working with paths from a command
 - Symlinks that can be created safely: linking twice is fine, and existing entries are never overwritten
 - `files()`, `folders()` and `symlinks()` queries on a directory, with filters by extension, contained file, broken link or target

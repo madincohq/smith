@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { Transaction } from '@/utils/transaction';
+import { Transaction, type Step } from '@/utils/transaction';
 
 describe('Transaction', () => {
 	it('runs each up step in order', async () => {
 		const events: string[] = [];
 
-		await new Transaction().run([
+		await WhenRunning([
 			{ up: () => { events.push('first'); } },
 			{ up: async () => { events.push('second'); } },
 		]);
@@ -17,7 +17,7 @@ describe('Transaction', () => {
 		const events: string[] = [];
 		const failure = new Error('publish failed');
 
-		await expect(new Transaction().run([
+		await expect(WhenRunning([
 			{ up: () => { events.push('version'); }, down: () => { events.push('restore version'); } },
 			{ up: () => { events.push('publish'); throw failure; }, down: () => { events.push('restore publish'); } },
 			{ up: () => { events.push('push'); } },
@@ -31,7 +31,7 @@ describe('Transaction', () => {
 		const failure = new Error('up failed');
 		const rollbackFailure = new Error('down failed');
 
-		await expect(new Transaction().run([
+		await expect(WhenRunning([
 			{ up: () => {}, down: () => { events.push('first down'); } },
 			{ up: () => { throw failure; }, down: () => { throw rollbackFailure; } },
 		])).rejects.toMatchObject({ errors: [failure, rollbackFailure] });
@@ -39,3 +39,7 @@ describe('Transaction', () => {
 		expect(events).toEqual(['first down']);
 	});
 });
+
+function WhenRunning(steps: Step[]): Promise<void> {
+	return new Transaction().run(steps);
+}

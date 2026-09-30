@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { Command, flag, optional, Transaction } from '@madinco/smith';
+import { Command, Directory, flag, optional, Transaction } from '@madinco/smith';
 
 const LEVELS = ['patch', 'minor', 'major'];
 
@@ -149,7 +149,9 @@ export class ReleaseCommand extends Command {
 	}
 
 	private version(): string {
-		return this.read('node', ['-p', "require('./package.json').version"]);
+		const manifest = new Directory(this.project ?? this.cwd).file('package.json');
+
+		return (JSON.parse(manifest.read()) as { version: string }).version;
 	}
 }
 
