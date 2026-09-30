@@ -144,6 +144,26 @@ Here, `world` is `this.argument('name')` and `--loud` is `this.option('loud')`.
 Running `smith` on its own lists every command it found. Running `smith greet --help`
 prints that command's description, usage, arguments and options.
 
+## Filesystem collections
+
+Filesystem queries return a `Collection` when you call `get()`. Query methods such as
+`withExtension()` select entries from disk; collection methods work with the returned
+items in memory.
+
+```ts
+import { Directory } from '@madinco/smith';
+
+const directory = new Directory(process.cwd());
+const files = directory.files().withExtension('md').get();
+
+files.reject((file) => file.name.startsWith('.')).pluck('name').each((name) => console.log(name));
+files.contains((file) => file.name === 'SKILL.md');
+```
+
+Collections are iterable and provide `map`, `filter`, `reject`, `each`, `first`,
+`last`, `contains`, `isEmpty`, `count`, and `pluck`. `map`, `filter`, `reject`, and
+`pluck` return new collections. Use `toArray()` when you need a plain array.
+
 ## Output
 
 `line`, `info`, `comment`, `warn`, `error`, `newLine`, `sections` for text.
