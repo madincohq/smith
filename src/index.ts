@@ -7,6 +7,7 @@ export {
 	type Arguments,
 } from './arguments.js';
 export { Command } from './command.js';
+export { Collection } from './support/collection.js';
 export { MakeCommand } from './commands/make.js';
 export { detached, type Context } from './context.js';
 export { Kernel, type Importer } from './kernel.js';
