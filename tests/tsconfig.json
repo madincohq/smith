@@ -15,5 +15,5 @@
       "@madinco/smith": ["../src/index.ts"]
     }
   },
-  "include": [".", "../commands", "../examples", "../vitest.config.ts"]
+  "include": [".", "../commands", "../examples", "../playground", "../vitest.config.ts"]
 }

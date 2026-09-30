@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe('Directory', () => {
-	it('given a path, when describing a directory, then exposes its path and name', () => {
+	it('normalizes its path and exposes its name', () => {
 		const path = GivenPath(['copper', '..', 'marble']);
 		const expectedPath = GivenPath(['marble']);
 		const directory = GivenDirectory(path);
@@ -24,13 +24,13 @@ describe('Directory', () => {
 		expect(directory.name).toBe('marble');
 	});
 
-	it('given a relative path, when describing a directory, then makes its path absolute', () => {
+	it('resolves a relative path from the working directory', () => {
 		const directory = GivenDirectory('.');
 
 		expect(directory.path).toBe(process.cwd());
 	});
 
-	it('given a directory, when composing nested paths, then returns directories and files', () => {
+	it('resolves nested directory and file paths relative to itself', () => {
 		const directory = GivenDirectory(GivenPath([]));
 		const branch = directory.directory('cobalt');
 		const document = branch.directory('violet').file('ledger.txt');
@@ -60,7 +60,7 @@ describe('Directory', () => {
 		expect(WhenCheckingPathExists(directory.path)).toBe(false);
 	});
 
-	it('given a nested directory, when asking for its parent, then returns the parent directory', () => {
+	it('returns its parent directory', () => {
 		const directory = GivenDirectory(GivenPath(['cedar', 'granite']));
 		const parent = WhenGettingParentOf(directory);
 
@@ -68,7 +68,7 @@ describe('Directory', () => {
 		expect(parent.path).toBe(GivenPath(['cedar']));
 	});
 
-	it('given existing and missing directories, when checking existence, then distinguishes them', () => {
+	it('exists only when the directory is present', () => {
 		const existing = GivenExistingDirectory(GivenPath(['amber']));
 		const missing = GivenDirectory(GivenPath(['indigo']));
 
@@ -76,7 +76,7 @@ describe('Directory', () => {
 		expect(WhenCheckingExistenceOf(missing)).toBe(false);
 	});
 
-	it('given a file, when checking it as a directory, then neither it nor its child exists as one', () => {
+	it('does not mistake a file or a path below it for a directory', () => {
 		const file = GivenExistingFile(GivenPath(['orbit.txt']));
 		const fileAsDirectory = GivenDirectory(file.path);
 		const childAsDirectory = GivenDirectory(GivenPath(['orbit.txt', 'child']));
@@ -85,21 +85,21 @@ describe('Directory', () => {
 		expect(WhenCheckingExistenceOf(childAsDirectory)).toBe(false);
 	});
 
-	it('given a missing nested directory, when ensuring it, then creates it and returns itself', () => {
+	it('creates missing nested directories when ensured', () => {
 		const directory = GivenDirectory(GivenPath(['pine', 'quartz']));
 
 		expect(WhenEnsuringDirectory(directory)).toBe(directory);
 		expect(WhenCheckingExistenceOf(directory)).toBe(true);
 	});
 
-	it('given an existing directory, when ensuring it, then returns itself', () => {
+	it('returns itself when ensuring an existing directory', () => {
 		const directory = GivenExistingDirectory(GivenPath(['maple']));
 
 		expect(WhenEnsuringDirectory(directory)).toBe(directory);
 		expect(WhenCheckingExistenceOf(directory)).toBe(true);
 	});
 
-	it('given paths with no entries, when composing them, then creates nothing on disk', () => {
+	it('does not create entries when composing paths', () => {
 		const directory = GivenDirectory(GivenPath(['unmade', 'birch']));
 		const document = directory.directory('elm').file('draft.txt');
 

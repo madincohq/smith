@@ -15,7 +15,7 @@ afterEach(() => {
 });
 
 describe('File', () => {
-	it('given a path, when describing a file, then exposes its path and name', () => {
+	it('normalizes its path and exposes its name', () => {
 		const path = GivenPath(['copper', '..', 'marble.txt']);
 		const expectedPath = GivenPath(['marble.txt']);
 		const file = GivenFile(path);
@@ -24,7 +24,7 @@ describe('File', () => {
 		expect(file.name).toBe('marble.txt');
 	});
 
-	it('given a file, when asking for its parent, then returns the parent directory', () => {
+	it('returns its parent directory', () => {
 		const file = GivenFile(GivenPath(['orbit.txt']));
 		const parent = WhenGettingParentOf(file);
 
@@ -32,7 +32,7 @@ describe('File', () => {
 		expect(parent.path).toBe(GivenPath([]));
 	});
 
-	it('given existing and missing files, when checking existence, then distinguishes them', () => {
+	it('exists only when the file is present', () => {
 		const existing = GivenExistingFile(GivenPath(['violet.txt']), 'hello');
 		const missing = GivenFile(GivenPath(['indigo.txt']));
 
@@ -40,7 +40,7 @@ describe('File', () => {
 		expect(WhenCheckingExistenceOf(missing)).toBe(false);
 	});
 
-	it('given a directory and a child of a file, when checking them as files, then neither exists as one', () => {
+	it('does not mistake a directory or a path below a file for a file', () => {
 		GivenExistingFile(GivenPath(['ledger.txt']), 'hello');
 		const directoryAsFile = GivenFile(GivenPath([]));
 		const childAsFile = GivenFile(GivenPath(['ledger.txt', 'child']));
@@ -49,20 +49,20 @@ describe('File', () => {
 		expect(WhenCheckingExistenceOf(childAsFile)).toBe(false);
 	});
 
-	it('given a file with UTF-8 text, when reading it, then returns its contents', () => {
+	it('reads its UTF-8 contents', () => {
 		const file = GivenExistingFile(GivenPath(['quartz.txt']), 'café');
 
 		expect(WhenReadingFile(file)).toBe('café');
 	});
 
-	it('given a missing file, when reading it, then raises an error without creating it', () => {
+	it('throws when reading a missing file without creating it', () => {
 		const file = GivenFile(GivenPath(['missing.txt']));
 
 		expect(() => WhenReadingFile(file)).toThrowError(/ENOENT/);
 		expect(WhenCheckingPathExists(file.path)).toBe(false);
 	});
 
-	it('given a file with a missing parent, when describing it, then creates nothing on disk', () => {
+	it('does not touch the filesystem when constructed', () => {
 		const file = GivenFile(GivenPath(['unmade', 'draft.txt']));
 
 		expect(file.path).toBe(GivenPath(['unmade', 'draft.txt']));
