@@ -1,6 +1,6 @@
 {
   "name": "@madinco/smith",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Artisan-style command runner for Node projects and personal workflows.",
   "type": "module",
   "license": "MIT",
