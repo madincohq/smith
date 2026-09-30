@@ -168,9 +168,9 @@ project.symlink('current').to(project.directory('projects/demo'));
 
 ```ts
 project.directory('src').files().withExtension('ts').count();
-skills.folders().containingFile('SKILL.md').get();
-workspace.symlinks().broken().exists();
-workspace.symlinks().pointingTo(project).first();
+project.directory('skills').folders().containingFile('SKILL.md').get();
+project.symlinks().broken().exists();
+project.symlinks().pointingTo(project.directory('projects/demo')).first();
 ```
 
 When you only need a number or a yes/no, ask the query with `count()`, `first()` or
@@ -223,6 +223,37 @@ method groups several of those rows beneath a heading, and each row may carry a 
 `spin(label, task)` for indeterminate work, `progress(total)` for a bar. Both write to
 stderr and degrade to plain lines when the output is not a TTY.
 
+## Asking questions
+
+```ts
+const name = await this.ask('Project name?', 'demo');
+
+if (!await this.confirm(`Create ${name}?`)) return Command.SUCCESS;
+```
+
+`ask` returns the answer, or the fallback when the answer is empty. `confirm` accepts `y`
+or `yes` and defaults to no, unless you pass `true` as the second argument. When there is
+no terminal to ask, both return their fallback.
+
+## Generating files
+
+`Stubs` renders templates with `{{ key }}` placeholders, and `Files` writes the result,
+creating directories as needed.
+
+```ts
+import { Files, Stubs } from '@madinco/smith';
+
+const template = Stubs.read('project', new URL('../stubs/', import.meta.url));
+
+Files.write([{
+	path: project.file('project.json').path,
+	contents: Stubs.render(template, { name: 'demo' }),
+}]);
+```
+
+`Stubs.read('project', base)` reads `project.stub` from that folder. `Files.existing()`
+tells you which of those paths already exist, so you can refuse to overwrite them.
+
 ## Exit codes
 
 Return one from `handle`. `Command.SUCCESS` (0), `Command.FAILURE` (1),
@@ -231,7 +262,7 @@ Return one from `handle`. `Command.SUCCESS` (0), `Command.FAILURE` (1),
 
 ## Examples
 
-`examples/` holds runnable commands covering each of these. See its
+`examples/` holds runnable commands for arguments, options and output. See its
 [README](examples/README.md).
 
 ## Contributing

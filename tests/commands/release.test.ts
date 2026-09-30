@@ -1,4 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Command, Terminal, type Context } from '@';
 import { ReleaseCommand } from '@commands/release';
 
@@ -14,6 +17,7 @@ class TestReleaseCommand extends ReleaseCommand {
 	}
 }
 
+let root: string;
 let currentVersion: string;
 let head: string;
 let tagExists: boolean;
@@ -23,6 +27,8 @@ let loginAuthenticates: boolean;
 let failing: string[];
 
 beforeEach(() => {
+	root = mkdtempSync(join(tmpdir(), 'smith-release-'));
+	GivenPackageVersion('0.1.0');
 	currentVersion = '0.1.0';
 	head = 'original-head';
 	tagExists = false;
@@ -38,7 +44,6 @@ beforeEach(() => {
 		if (call === 'git rev-parse --abbrev-ref HEAD') return 'main';
 		if (call === 'git rev-parse HEAD') return head;
 		if (call === 'git tag --list v0.2.0') return tagExists ? 'v0.2.0' : '';
-		if (command === 'node') return currentVersion;
 		if (call === 'npm whoami') {
 			if (!authenticated) throw new Error('npm whoami failed');
 			return 'publisher';
@@ -63,7 +68,20 @@ beforeEach(() => {
 	});
 });
 
+afterEach(() => {
+	rmSync(root, { recursive: true, force: true });
+});
+
 describe('release', () => {
+	it('reads the current version from the project package.json', async () => {
+		GivenPackageVersion('1.4.2');
+
+		await expect(WhenReleasing({ args: ['minor', '--dry'] })).resolves.toBe(Command.SUCCESS);
+
+		expect(calls()).toContain('git tag --list v1.5.0');
+		expect(calls().some((call) => call.startsWith('node '))).toBe(false);
+	});
+
 	it('publishes before pushing the release commit and tag', async () => {
 		await expect(WhenReleasing()).resolves.toBe(Command.SUCCESS);
 
@@ -270,6 +288,10 @@ describe('release', () => {
 	});
 });
 
+function GivenPackageVersion(version: string): void {
+	writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'fixture', version }));
+}
+
 function GivenDirtyWorkingTree(): void {
 	dirty = true;
 }
@@ -287,14 +309,14 @@ function GivenExistingTag(): void {
 	tagExists = true;
 }
 
-function WhenReleasing({ args = ['minor', '--force'], answer, project = '/project' }: {
+function WhenReleasing({ args = ['minor', '--force'], answer, project = root }: {
 	args?: string[];
 	answer?: string;
 	project?: Context['project'];
 } = {}): Promise<number> {
 	const terminal = new Terminal({ out: () => {}, err: () => {}, ask: async () => answer ?? null });
 
-	return new TestReleaseCommand().run(terminal, args, { cwd: '/project', project });
+	return new TestReleaseCommand().run(terminal, args, { cwd: root, project });
 }
 
 function calls(): string[] {

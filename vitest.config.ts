@@ -10,6 +10,7 @@ export default defineConfig({
 			{ find: /^@commands\/(.*)$/, replacement: `${commands}/$1` },
 			{ find: /^@\/(.*)$/, replacement: `${source}/$1` },
 			{ find: /^@$/, replacement: `${source}/index.ts` },
+			{ find: /^@madinco\/smith$/, replacement: `${source}/index.ts` },
 		],
 	},
 	test: {
