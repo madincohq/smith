@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { Command, Directory, flag, optional, Transaction } from '@madinco/smith';
+import { Command, Directory, flag, optional, Transaction } from '../src/index.js';
 
 const LEVELS = ['patch', 'minor', 'major'];
 

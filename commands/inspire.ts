@@ -1,4 +1,4 @@
-import { Command } from '@madinco/smith';
+import { Command } from '../src/index.js';
 
 const QUOTES = [
 	'When there is no desire, all things are at peace. - Laozi',
