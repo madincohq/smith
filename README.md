@@ -144,17 +144,46 @@ Here, `world` is `this.argument('name')` and `--loud` is `this.option('loud')`.
 Running `smith` on its own lists every command it found. Running `smith greet --help`
 prints that command's description, usage, arguments and options.
 
-## Filesystem collections
+## Filesystem
 
-Filesystem queries return a `Collection` when you call `get()`. Query methods such as
-`withExtension()` select entries from disk; collection methods work with the returned
-items in memory.
+Smith has small models for files, directories and symlinks. Creating one never touches the
+disk; only methods such as `exists()` or `read()` do.
 
 ```ts
 import { Directory } from '@madinco/smith';
 
-const directory = new Directory(process.cwd());
-const files = directory.files().withExtension('md').get();
+const project = new Directory(this.cwd);
+
+project.file('package.json').read();
+project.directory('src').exists();
+project.symlink('current').to(project.directory('projects/demo'));
+```
+
+`to()` creates the link, does nothing if the same link is already there, and throws a
+`SymlinkConflict` rather than replace anything else at that path.
+
+### Queries
+
+`files()`, `folders()` and `symlinks()` look at the direct children of a directory.
+
+```ts
+project.directory('src').files().withExtension('ts').count();
+skills.folders().containingFile('SKILL.md').get();
+workspace.symlinks().broken().exists();
+workspace.symlinks().pointingTo(project).first();
+```
+
+When you only need a number or a yes/no, ask the query with `count()`, `first()` or
+`exists()`. Call `get()` when you want the entries themselves. A missing directory simply
+has no matches.
+
+### Collections
+
+`get()` returns a `Collection`. Queries read from disk; collections work with what was
+read.
+
+```ts
+const files = project.files().withExtension('md').get();
 
 files.reject((file) => file.name.startsWith('.')).pluck('name').each((name) => console.log(name));
 files.contains((file) => file.name === 'SKILL.md');
