@@ -1,6 +1,7 @@
 import { existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { File } from './file.js';
+import { Symlink } from './symlink.js';
 
 export class Directory {
 	readonly path: string;
@@ -17,6 +18,10 @@ export class Directory {
 
 	file(path: string): File {
 		return new File(resolve(this.path, path));
+	}
+
+	symlink(path: string): Symlink {
+		return new Symlink(resolve(this.path, path));
 	}
 
 	parent(): Directory {

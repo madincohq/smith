@@ -15,6 +15,7 @@ export { InvalidOption } from './exceptions/invalid-option.js';
 export { renders, type Renders } from './exceptions/renders.js';
 export { Directory } from './filesystem/directory.js';
 export { File } from './filesystem/file.js';
+export { Symlink, SymlinkConflict } from './filesystem/symlink.js';
 export {
 	flag,
 	number,

@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Directory, File } from '@';
+import { Directory, File, Symlink } from '@';
 
 let root = '';
 
@@ -40,6 +40,24 @@ describe('Directory', () => {
 		expect(document.path).toBe(GivenPath(['cobalt', 'violet', 'ledger.txt']));
 		expect(document.name).toBe('ledger.txt');
 		expect(branch.file('violet/../index.txt').path).toBe(GivenPath(['cobalt', 'index.txt']));
+	});
+
+	it('resolves a symlink path relative to the directory', () => {
+		const directory = GivenDirectory(GivenPath(['cobalt']));
+
+		const link = directory.symlink('violet/../shortcut');
+
+		expect(link).toBeInstanceOf(Symlink);
+		expect(link.path).toBe(GivenPath(['cobalt', 'shortcut']));
+	});
+
+	it('does not create entries when describing a symlink', () => {
+		const directory = GivenDirectory(GivenPath(['unmade']));
+
+		const link = directory.symlink('shortcut');
+
+		expect(link.path).toBe(GivenPath(['unmade', 'shortcut']));
+		expect(WhenCheckingPathExists(directory.path)).toBe(false);
 	});
 
 	it('given a nested directory, when asking for its parent, then returns the parent directory', () => {
