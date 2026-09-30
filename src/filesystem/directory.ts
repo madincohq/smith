@@ -1,6 +1,9 @@
 import { existsSync, lstatSync, mkdirSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import { File } from './file.js';
+import { DirectoryQuery } from './queries/directory-query.js';
+import { FileQuery } from './queries/file-query.js';
+import { SymlinkQuery } from './queries/symlink-query.js';
 import { Symlink } from './symlink.js';
 
 export class Directory {
@@ -22,6 +25,18 @@ export class Directory {
 
 	symlink(path: string): Symlink {
 		return new Symlink(resolve(this.path, path));
+	}
+
+	files(): FileQuery {
+		return new FileQuery(this);
+	}
+
+	folders(): DirectoryQuery {
+		return new DirectoryQuery(this);
+	}
+
+	symlinks(): SymlinkQuery {
+		return new SymlinkQuery(this);
 	}
 
 	parent(): Directory {

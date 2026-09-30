@@ -1,8 +1,8 @@
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, sep } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { Directory, File, Symlink } from '@';
+import { Directory, DirectoryQuery, File, FileQuery, Symlink, SymlinkQuery } from '@';
 
 let root = '';
 
@@ -106,6 +106,33 @@ describe('Directory', () => {
 		expect(document.path).toBe(GivenPath(['unmade', 'birch', 'elm', 'draft.txt']));
 		expect(WhenCheckingPathExists(GivenPath(['unmade']))).toBe(false);
 	});
+
+	it('queries its own files', () => {
+		const directory = GivenPopulatedDirectory();
+
+		const files = WhenQueryingFiles(directory);
+
+		expect(files).toBeInstanceOf(FileQuery);
+		expect(files.get().pluck('path').toArray()).toEqual([GivenPath(['cobalt', 'ledger.txt'])]);
+	});
+
+	it('queries its own folders', () => {
+		const directory = GivenPopulatedDirectory();
+
+		const folders = WhenQueryingFolders(directory);
+
+		expect(folders).toBeInstanceOf(DirectoryQuery);
+		expect(folders.get().pluck('path').toArray()).toEqual([GivenPath(['cobalt', 'violet'])]);
+	});
+
+	it('queries its own symlinks', () => {
+		const directory = GivenPopulatedDirectory();
+
+		const symlinks = WhenQueryingSymlinks(directory);
+
+		expect(symlinks).toBeInstanceOf(SymlinkQuery);
+		expect(symlinks.get().pluck('path').toArray()).toEqual([GivenPath(['cobalt', 'shortcut'])]);
+	});
 });
 
 function GivenPath(segments: string[]): string {
@@ -126,6 +153,20 @@ function GivenExistingFile(path: string): File {
 	return new File(path);
 }
 
+function GivenExistingSymlink(path: string, target: string): Symlink {
+	symlinkSync(target, path);
+	return new Symlink(path);
+}
+
+function GivenPopulatedDirectory(): Directory {
+	const directory = GivenExistingDirectory(GivenPath(['cobalt']));
+	GivenExistingFile(GivenPath(['cobalt', 'ledger.txt']));
+	GivenExistingDirectory(GivenPath(['cobalt', 'violet', 'nested']));
+	GivenExistingFile(GivenPath(['cobalt', 'violet', 'inner.txt']));
+	GivenExistingSymlink(GivenPath(['cobalt', 'shortcut']), 'ledger.txt');
+	return directory;
+}
+
 function WhenGettingParentOf(directory: Directory): Directory {
 	return directory.parent();
 }
@@ -136,6 +177,18 @@ function WhenCheckingExistenceOf(directory: Directory): boolean {
 
 function WhenEnsuringDirectory(directory: Directory): Directory {
 	return directory.ensure();
+}
+
+function WhenQueryingFiles(directory: Directory): FileQuery {
+	return directory.files();
+}
+
+function WhenQueryingFolders(directory: Directory): DirectoryQuery {
+	return directory.folders();
+}
+
+function WhenQueryingSymlinks(directory: Directory): SymlinkQuery {
+	return directory.symlinks();
 }
 
 function WhenCheckingPathExists(path: string): boolean {

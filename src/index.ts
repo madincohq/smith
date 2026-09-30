@@ -16,6 +16,9 @@ export { InvalidOption } from './exceptions/invalid-option.js';
 export { renders, type Renders } from './exceptions/renders.js';
 export { Directory } from './filesystem/directory.js';
 export { File } from './filesystem/file.js';
+export { DirectoryQuery } from './filesystem/queries/directory-query.js';
+export { FileQuery } from './filesystem/queries/file-query.js';
+export { SymlinkQuery } from './filesystem/queries/symlink-query.js';
 export { Symlink, SymlinkConflict } from './filesystem/symlink.js';
 export {
 	flag,
